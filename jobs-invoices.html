@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jobs & Invoices</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1d1f24;--mute:#6b7280;--line:#e3e1da;--acc:#2f5fd0;--accink:#fff;--bad:#c0392b;--ok:#1e8e5a}
+@media(prefers-color-scheme:dark){:root{--bg:#16181c;--card:#1f2228;--ink:#ecebe6;--mute:#9aa0aa;--line:#32363e;--acc:#6b93ff;--accink:#0d1220;--bad:#ff7b6b;--ok:#4fcf92}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+header h1{margin:0;padding:10px 14px 0;font-size:17px}
+nav{display:flex;gap:2px;padding:6px 8px;overflow-x:auto}
+nav button{border:0;background:none;color:var(--mute);padding:8px 12px;border-radius:8px;font:inherit;font-weight:600;white-space:nowrap}
+nav button.on{background:var(--acc);color:var(--accink)}
+main{max-width:980px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+h2{font-size:16px;margin:0 0 8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+button.b,a.b{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 12px;border-radius:8px;font:inherit;cursor:pointer;text-decoration:none}
+button.p{background:var(--acc);color:var(--accink);border-color:var(--acc);font-weight:600}
+button.d{color:var(--bad)}
+button.s{padding:4px 8px;font-size:13px}
+label{display:block;font-size:13px;color:var(--mute);margin:8px 0 3px}
+input,select,textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:64px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mute{color:var(--mute)}.small{font-size:13px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal .dh{text-align:center;font-size:12px;color:var(--mute);padding:4px 0}
+.cell{min-height:64px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px;overflow:hidden;cursor:pointer}
+.cell.out{opacity:.45}.cell.sel{outline:2px solid var(--acc)}.cell.today .n{background:var(--acc);color:var(--accink);border-radius:10px;padding:0 5px}
+.n{font-size:12px;font-weight:600}
+.chip{font-size:10.5px;color:#fff;border-radius:3px;padding:0 3px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev{display:flex;gap:8px;align-items:stretch;padding:8px 0;border-top:1px solid var(--line)}
+.ev:first-of-type{border-top:0}
+.bar{width:5px;border-radius:3px;flex:none}
+.tag{font-size:12px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--mute)}
+.tag.ok{color:var(--ok);border-color:var(--ok)}.tag.bad{color:var(--bad);border-color:var(--bad)}
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;overflow:auto;padding:10px}
+#modal.on{display:block}
+.mb{background:var(--card);max-width:720px;margin:0 auto;border-radius:12px;padding:14px}
+.inv{background:#fff;color:#111;padding:26px;border:1px solid #ddd;border-radius:6px;position:relative;font-size:14px}
+.inv h1{margin:0 0 4px;font-size:26px;letter-spacing:.5px}
+.inv .top{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.inv table{width:100%;border-collapse:collapse;margin:18px 0 8px}
+.inv th{text-align:start;border-bottom:2px solid #111;padding:6px 4px;font-size:12px;text-transform:uppercase}
+.inv td{padding:6px 4px;border-bottom:1px solid #e5e5e5;vertical-align:top}
+.inv .num{text-align:end;white-space:nowrap}
+.inv .tot{margin-inline-start:auto;width:260px}
+.inv .tot div{display:flex;justify-content:space-between;padding:3px 0}
+.inv .grand{font-weight:700;font-size:16px;border-top:2px solid #111;margin-top:4px;padding-top:6px}
+.inv .stamp{position:absolute;top:40%;left:30%;font-size:60px;color:rgba(30,142,90,.25);border:6px solid rgba(30,142,90,.25);padding:0 14px;transform:rotate(-14deg);font-weight:800}
+.inv .foot{margin-top:22px;font-size:13px;color:#444;white-space:pre-line}
+@media(max-width:560px){.g2{grid-template-columns:1fr}.cell{min-height:52px}.chip{display:none}.cell .dot{display:block}.inv{padding:14px}}
+.dots{display:flex;gap:2px;flex-wrap:wrap;margin-top:3px}.dots i{width:7px;height:7px;border-radius:50%}
+@media(min-width:561px){.dots{display:none}}
+#modal .decl,.decl{font-family:Cambria,Georgia,'Times New Roman',serif;font-size:13px}
+.inv.decl .dh{font-weight:700;font-size:15px;margin-bottom:34px}
+.inv.decl table{border-collapse:collapse;width:100%;margin:0 0 30px}
+.inv.decl th,.inv.decl td{border:1.5px solid #000;padding:3px 6px;text-align:left;font-size:13px;text-transform:none;height:24px;vertical-align:top}
+.inv.decl .d1 th{width:26%}
+.inv.decl .dn{margin-top:26px;line-height:1.4}
+.inv.attw{font-family:Calibri,Carlito,Arial,sans-serif;font-size:13px}
+.inv.attw h3{margin:14px 0 6px;font-size:15px}
+.inv.attw table{border-collapse:collapse;margin:0 0 14px}
+.inv.attw .att{width:100%}
+.inv.attw .att th{background:#a9d18e;border:1px solid #000;padding:3px 6px;text-align:center;font-size:13px;text-transform:none}
+.inv.attw .att td{border:1px solid #000;padding:2px 6px;text-align:center;height:21px}
+.inv.attw .att td.l{text-align:left}
+.inv.attw .att td.gap,.inv.attw .att th.gap{width:14px;padding:0}
+.inv.attw .att tr.no td{background:#e7e6e6}
+.inv.attw .atot th,.inv.attw .atot td{border:1px solid #000;padding:3px 8px;font-weight:700;text-align:left;font-size:13px;text-transform:none}
+.inv.attw .atot td{text-align:right;min-width:60px}
+.b.s.soft{border-style:dashed;color:var(--mute)}
+@media print{header,main,.noprint{display:none!important}#modal{position:static;background:none;padding:0;display:block}.mb{padding:0;max-width:none}.inv{border:0;padding:0}body{background:#fff}}
+</style>
+</head>
+<body>
+<header><h1>Jobs &amp; Invoices</h1><nav id="nav"></nav></header>
+<main id="main"></main>
+<div id="modal"></div>
+<script>
+const KEY='jobs-invoices-v1';
+const COLORS=['#2f5fd0','#c0392b','#1e8e5a','#b7791f','#7b4bb7','#0f8b9d','#d6336c','#5c6b3a'];
+const CURS=['EUR','USD','GBP','ILS','CHF','CAD','AUD'];
+const LANGS={en:'English',nl:'Nederlands',he:'עברית'};
+const LOC={en:'en-IE',nl:'nl-NL',he:'he-IL'};
+const MODES={flat:'Flat fee per job',hourly:'Hourly (hours from start/end time)',session:'Per lesson / session',daystudent:'Per day + per student'};
+const I18N={
+ en:{invoice:'Invoice',no:'No.',date:'Date',billTo:'Bill to',desc:'Description',qty:'Qty',rate:'Rate',amount:'Amount',sub:'Subtotal',vat:'VAT',total:'Total',pay:'Payment details',paid:'PAID'},
+ nl:{invoice:'Factuur',no:'Nr.',date:'Datum',billTo:'Factuur aan',desc:'Omschrijving',qty:'Aantal',rate:'Tarief',amount:'Bedrag',sub:'Subtotaal',vat:'BTW',total:'Totaal',pay:'Betaalgegevens',paid:'BETAALD'},
+ he:{invoice:'חשבונית',no:'מס׳',date:'תאריך',billTo:'לכבוד',desc:'תיאור',qty:'כמות',rate:'תעריף',amount:'סכום',sub:'סכום ביניים',vat:'מע״מ',total:'סך הכל',pay:'פרטי תשלום',paid:'שולם'}
+};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const PERSONAL_JT={id:'jt5',name:'Personal / event',color:'#7a7f87',mode:'flat',rate:0,rate2:0,lang:'',cur:'',presets:'Kollel, Speaker, Event, Appointment',trackOnly:true,tpl:{title:'',intro:'',footer:'',layout:'itemized'}};
+const DEFAULT_BLOCKS=[{label:'Mincha–Maariv & shiur',mode:'fixed',from:'21:00',to:'21:30',off:0,len:30,gap:0,days:[0,1,2,3,4],start:'',end:''}];
+const E=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const br=s=>E(s).replace(/\n/g,'<br>');
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const pd=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const today=()=>ymd(new Date());
+const addDays=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
+const money=(n,cur,lang)=>new Intl.NumberFormat(LOC[lang]||'en-IE',{style:'currency',currency:cur||'EUR'}).format(n||0);
+const fdate=(s,lang)=>pd(s).toLocaleDateString(LOC[lang||'en']||'en-IE',{day:'numeric',month:'short',year:'numeric'});
+const opts=(arr,sel)=>arr.map(([v,l])=>`<option value="${E(v)}"${v===sel?' selected':''}>${E(l)}</option>`).join('');
+
+function defaults(){return{v:1,
+ settings:{currency:'EUR',lang:'en',name:'J. Sigal',address:'Oostelijk Halfrond\n1183 GA Amstelveen',email:'sigaljj@hotmail.com',phone:'0613108286',payment:'NL86ABNA0408368527\nten name van J.Sigal',fullName:'Jonathan L Sigal',city:'Amstelveen',iban:'NL 86 ABNA 0408368527',prefix:'INV-',next:1,vat:0,blocks:JSON.parse(JSON.stringify(DEFAULT_BLOCKS))},
+ jobTypes:[
+  {id:'jt1',name:'Chevra Kadisha',color:COLORS[0],mode:'flat',rate:0,rate2:0,lang:'nl',cur:'',presets:'Ophaal, Transfer naar Schiphol, Begrafenis',tpl:{title:'Factuur',intro:'',footer:'',layout:'letter',payText:'Gelieve bovenstaand bedrag overmaken op rekeningnummer:',closing:'Vriendelijke groet',totalLabel:'Total'}},
+  {id:'jt2',name:'Teaching',color:COLORS[2],mode:'session',rate:65,rate2:0,lang:'',cur:'',presets:'Lesson',tiers:[{name:'Old price',rate:45},{name:'New price',rate:65}],duration:60,trackOnly:true,tpl:{title:'',intro:'',footer:'',layout:'itemized'}},
+  {id:'jt3',name:'Lekstraat synagogue',color:COLORS[3],mode:'daystudent',rate:0,rate2:0,lang:'en',cur:'',presets:'Morning learning',tpl:{title:'',intro:'',footer:'',layout:'attendance',attTeacher:'Rav Sigal',showAmount:false}},
+  {id:'jt4',name:'Speaking / other',color:COLORS[4],mode:'flat',rate:0,rate2:0,lang:'',cur:'',presets:'Speaking engagement',tpl:{title:'',intro:'',footer:'',layout:'itemized'}},
+  JSON.parse(JSON.stringify(PERSONAL_JT))
+ ],clients:[{id:'c_lek',name:'Lekstraat synagogue',kind:'Synagogue',email:'',phone:'',address:'',notes:'Paid per day I attend; monthly attendance sheet with students per day.',rates:{},payments:[],layout:'',declTitle:'',declNotes:''},
+ {id:'c_jbw',name:'Het Joodse Begrafeniswezen (JBW)',kind:'Organization',email:'jbw@hetjbw.nl',phone:'020-6462545',address:'Ter Kleef 6\n1081 AM Amsterdam',notes:'Pickups, burials, airport transfers. Price per job, sometimes higher when far away.',rates:{jt1:160},payments:[],layout:'letter',declTitle:'',declNotes:''},
+ {id:'c_nihs',name:'Joodse Gemeente Amsterdam (NIHS)',kind:'Organization',email:'info@nihs.nl',phone:'+31 (0)20 646 00 46',address:'Max Havelaarlaan 435\n1183 LZ Amstelveen',notes:'Muiderberg burials were invoiced to them directly; for the last months JBW invoices NIHS, so log those as record only.',rates:{},payments:[],layout:'',declTitle:'',declNotes:''},
+ {id:'c_pig',name:'Portugees-Israëlitische Gemeente Amsterdam',kind:'Organization',email:'info@esnoga.com',phone:'',address:'Port Isr Gemeente\nMr Visserplein 3\n1011 RD Amsterdam',notes:'Uses the Declaratieformulier',rates:{jt1:165},payments:[],layout:'declaratie',declTitle:'Declaratieformulier Portugees – Israëlietische Gemeente te Amsterdam',declNotes:'N.B.:\nDeclaraties dienen uiterlijk één week na afloop van de maand waar in de activiteit plaats vond ingediend te zijn. Originele bonnen, openbaar vervoertickets, etc. graag bijvoegen!\nBij omschrijving graag invullen voor welke gelegenheid de kosten zijn gemaakt\nPostadres: Port Isr Gemeente, Mr Visserplein 3, 1011 RD Amsterdam.\nE-mail: info@esnoga.com'}],events:[],invoices:[]}}
+let S=load();
+function load(){try{const r=localStorage.getItem(KEY);if(r){const d=Object.assign(defaults(),JSON.parse(r));
+ if(!d.m1){if(!d.jobTypes.some(j=>j.id==='jt5'))d.jobTypes.push(JSON.parse(JSON.stringify(PERSONAL_JT)));d.m1=1}
+ if(!d.m2){d.settings=d.settings||{};if(!(d.settings.blocks||[]).length)d.settings.blocks=JSON.parse(JSON.stringify(DEFAULT_BLOCKS));d.m2=1}
+ return d}}catch(e){}const d=defaults();d.m1=1;d.m2=1;return d}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const jtOf=id=>S.jobTypes.find(j=>j.id===id)||{name:'?',color:'#888',mode:'flat',rate:0,rate2:0,tpl:{}};
+const clOf=id=>S.clients.find(c=>c.id===id);
+const clName=id=>{const c=clOf(id);return c?c.name:'(no client)'};
+const ui={tab:'cal',month:new Date(new Date().getFullYear(),new Date().getMonth(),1),sel:today(),inv:{jt:'',cl:''},f:{jt:'',cl:'',pl:'',from:'',to:'',q:'',st:''}};
+
+/* ---------- calculations ---------- */
+function hours(ev){if(!ev.start||!ev.end)return 0;const[a,b]=ev.start.split(':').map(Number),[c,d]=ev.end.split(':').map(Number);const h=((c*60+d)-(a*60+b))/60;return h>0?Math.round(h*100)/100:0}
+function qtyOf(ev){const m=jtOf(ev.jt).mode;if(m==='hourly')return hours(ev)||+ev.qty||0;if(m==='session')return ev.qty===''||ev.qty==null?1:+ev.qty;if(m==='daystudent')return +ev.qty||0;return 1}
+function rateOf(ev){const jt=jtOf(ev.jt),c=clOf(ev.client);
+ if(ev.rate!==''&&ev.rate!=null)return +ev.rate;
+ if(c&&c.rates&&c.rates[ev.jt]!==undefined&&c.rates[ev.jt]!=='')return +c.rates[ev.jt];
+ return +jt.rate||0}
+function amountOf(ev){const jt=jtOf(ev.jt),r=rateOf(ev),q=qtyOf(ev);
+ if(ev.status==='cancelled'&&ev.cancelBy==='them'&&ev.charge&&ev.cancelFee!==''&&ev.cancelFee!=null)return +ev.cancelFee;
+ if(jt.mode==='flat')return r;
+ if(jt.mode==='daystudent')return r+(+jt.rate2||0)*q;
+ return r*q}
+const layoutOf=(jt,c)=>(c&&c.layout)||(jt.tpl&&jt.tpl.layout)||'itemized';
+const counts=e=>e.status!=='cancelled'||(e.cancelBy==='them'&&!!e.charge);
+const billable=ev=>counts(ev)&&!ev.noinv&&!jtOf(ev.jt).trackOnly&&ev.date<=today();
+const byDT=(a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||''));
+function conflicts(ev){return S.events.some(o=>o.id!==ev.id&&o.status!=='cancelled'&&o.date===ev.date&&o.start&&o.end&&ev.start&&ev.end&&o.start<ev.end&&ev.start<o.end)}
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const tmin=s=>{const p=String(s||'0:0').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)};
+const mtime=n=>pad(Math.floor(n/60))+':'+pad(n%60);
+const DEFAULT_HOURS={0:{on:true,from:'18:00',to:'22:30',from2:'09:00',to2:'13:00'},1:{on:true,from:'18:00',to:'22:30',from2:'09:00',to2:'13:00'},2:{on:true,from:'18:00',to:'22:30',from2:'09:00',to2:'13:00'},3:{on:true,from:'18:00',to:'22:30',from2:'09:00',to2:'13:00'},4:{on:true,from:'18:00',to:'22:30',from2:'09:00',to2:'13:00'},5:{on:true,from:'09:00',to:'22:30',from2:'',to2:''},6:{on:true,from:'16:00',to:'22:30',from2:'',to2:''}};
+const hoursOf=w=>Object.assign({},DEFAULT_HOURS[w],(S.settings.hours||{})[w]);
+const candMin=()=>(S.settings.candles==null||S.settings.candles==='')?18:+S.settings.candles;
+const tzeitMin=()=>(S.settings.tzeit==null||S.settings.tzeit==='')?50:+S.settings.tzeit;
+const bufMin=()=>(S.settings.buffer==null||S.settings.buffer==='')?15:+S.settings.buffer;
+const stepMin=()=>+S.settings.step||30;
+const shortD=s=>fdate(s).replace(/ \d{4}$/,'');
+/* sunrise / sunset for Amsterdam, shown on the Netherlands clock (handles summer/winter time) */
+let _sunFmt=null;const _sunCache={};
+function sunTimes(ds){if(_sunCache[ds])return _sunCache[ds];let res={rise:null,set:null};
+ try{const [y,mo,d]=ds.split('-').map(Number),lat=52.3676,lon=4.9041,rad=Math.PI/180,zen=90.833,lngH=lon/15,N=Math.floor((Date.UTC(y,mo-1,d)-Date.UTC(y,0,0))/86400000);
+  const calc=rise=>{const t=N+((rise?6:18)-lngH)/24,M=0.9856*t-3.289;let L=M+1.916*Math.sin(M*rad)+0.020*Math.sin(2*M*rad)+282.634;L=((L%360)+360)%360;
+   let RA=Math.atan(0.91764*Math.tan(L*rad))/rad;RA=((RA%360)+360)%360;RA+=Math.floor(L/90)*90-Math.floor(RA/90)*90;RA/=15;
+   const sinD=0.39782*Math.sin(L*rad),cosD=Math.cos(Math.asin(sinD)),cosH=(Math.cos(zen*rad)-sinD*Math.sin(lat*rad))/(cosD*Math.cos(lat*rad));
+   if(cosH>1||cosH<-1)return null;let H=(rise?360-Math.acos(cosH)/rad:Math.acos(cosH)/rad)/15;const T=H+RA-0.06571*t-6.622,UT=(((T-lngH)%24)+24)%24;return Date.UTC(y,mo-1,d)+UT*3600000};
+  _sunFmt=_sunFmt||new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Amsterdam',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+  const loc=ms=>{if(ms==null)return null;const p=_sunFmt.formatToParts(new Date(ms));return +p.find(x=>x.type==='hour').value*60+ +p.find(x=>x.type==='minute').value};
+  res={rise:loc(calc(true)),set:loc(calc(false))}}catch(e){}
+ return _sunCache[ds]=res}
+function sunLine(date){const s=sunTimes(date);if(s.set==null)return'';let x='';if(!isRest(date)&&isRest(addDays(date,1)))x=` · Candle lighting ${mtime(s.set-candMin())}`;else if(!isRest(date)&&isRest(addDays(date,-1)))x=` · Shabbat / Yom Tov out ~${mtime(s.set+tzeitMin())}`;return`<div class="small mute">Sunrise ${mtime(s.rise)} · Sunset ${mtime(s.set)}${x}</div>`}
+const blocksOf=()=>S.settings.blocks||DEFAULT_BLOCKS;
+const bkey=b=>b.mode==='sunset'?(b.label||'')+'|sunset|'+(+b.off||0)+'|'+(+b.len||0):(b.label||'')+'|'+b.from+'|'+b.to;
+const excOn=date=>(S.settings.exc||[]).filter(x=>x.from<=date&&date<=(x.to||x.from));
+const isRest=d=>pd(d).getDay()===6||!!(()=>{const x=hebHoliday(d);return x&&!/^Erev/.test(x)})();
+function hoursFor(date){const ex=excOn(date),off=ex.find(x=>x.type==='off');if(off)return{on:false,from:'',to:'',from2:'',to2:'',reason:off.label};const o=ex.find(x=>x.type==='hours');if(o)return{on:true,from:o.start,to:o.end,from2:'',to2:''};
+ const H=Object.assign({},hoursOf(pd(date).getDay()));if(!H.on)return H;
+ if(pd(date).getDay()===6&&!offName(date)){const set=sunTimes(date).set;if(set==null)return Object.assign(H,{on:false,reason:'Shabbat'});const st=set+tzeitMin();H.capFrom=st;if(st>tmin(H.from)){H.from=mtime(Math.min(st,1439));H.capStart=true}H.from2='';H.to2='';if(tmin(H.from)>=tmin(H.to)){H.on=false;H.reason='Shabbat ends too late'}return H}
+ if(!isRest(date)){const set=sunTimes(date).set;if(set!=null){
+  if(isRest(addDays(date,1))){const cap=set-candMin();H.capAt=cap;if(cap<tmin(H.to)){H.to=mtime(Math.max(cap,0));H.capEnd=true}H.from2='';H.to2=''}
+  if(isRest(addDays(date,-1))){const st=set+tzeitMin();H.capFrom=st;if(st>tmin(H.from)){H.from=mtime(Math.min(st,1439));H.capStart=true}H.from2='';H.to2=''}}
+  if(tmin(H.from)>=tmin(H.to)){H.on=false;H.reason=H.capEnd?'Shabbat / Yom Tov starts too early':'Shabbat / Yom Tov ends too late'}}
+ return H}
+function offName(s){const hd=hebHoliday(s);if(hd&&!/^Erev/.test(hd))return hd;const ex=excOn(s).find(x=>x.type==='off');return ex?(ex.label?'Off: '+ex.label:'Day off'):''}
+function availFor(c,w){if(!c||!c.avail||!Object.keys(c.avail).length)return null;return c.avail[w]||false}
+function blockApplies(b,date){return (b.days||[]).includes(pd(date).getDay())&&(!b.start||date>=b.start)&&(!b.end||date<=b.end)}
+function blockSpan(b,date){if(b.mode==='sunset'){const st=sunTimes(date).set;if(st==null)return null;const s=st+(+b.off||0);return[s,s+(+b.len||30)]}if(!b.from||!b.to)return null;return[tmin(b.from),tmin(b.to)]}
+function blockPreview(b){for(let i=0;i<40;i++){const dt=addDays(today(),i);if(blockApplies(b,dt)){const sp=blockSpan(b,dt);if(!sp)return'';return 'Next: '+DOW[pd(dt).getDay()]+' '+shortD(dt)+', '+mtime(sp[0])+'–'+mtime(sp[1])+(b.mode==='sunset'?' (sunset '+mtime(sunTimes(dt).set)+')':'')}}return'No upcoming days'}
+function busyOn(date,excl){const out=[];
+ S.events.forEach(e=>{if(e.id===excl||e.date!==date||e.status==='cancelled'||!e.start)return;const jt=jtOf(e.jt),s=tmin(e.start);let en=e.end?tmin(e.end):s+(jt.duration||60);if(en<=s)en=s+60;out.push({s,e:en,label:(e.title||jt.name)+(e.client?' · '+clName(e.client):'')})});
+ const exs=excOn(date),skip=new Set(exs.filter(x=>x.type==='unblock').map(x=>x.key));
+ blocksOf().forEach(b=>{if(!blockApplies(b,date)||skip.has(bkey(b)))return;const sp=blockSpan(b,date);if(sp)out.push({s:sp[0],e:sp[1],label:b.label||'Blocked',block:true,gap:+b.gap||0})});
+ exs.filter(x=>x.type==='block'&&x.start&&x.end).forEach(x=>out.push({s:tmin(x.start),e:tmin(x.end),label:x.label||'Blocked',block:true}));
+ return out}
+function slotIssues(date,start,end,cid,excl,jid){const out=[];if(!date||!start)return out;const w=pd(date).getDay(),s=tmin(start);let e=end?tmin(end):s+((jtOf(jid).duration)||60);if(e<=s)e=s+60;
+ const mode=jtOf(jid).mode,strict=mode==='session'||mode==='hourly';
+ if(strict){const off=offName(date);if(off)out.push('That day is '+off+'.');
+  const H=hoursFor(date);if(!H.on)out.push('It is a day off in your availability ('+DOW[w]+').');
+  else if(!(s>=tmin(H.from)&&e<=tmin(H.to))){if(H.capStart&&s<tmin(H.from))out.push('Shabbat / Yom Tov is not over until about '+H.from+'.');else if(H.capEnd&&e>tmin(H.to))out.push('Shabbat / Yom Tov starts at '+mtime(H.capAt)+' (candle lighting). Finish by '+H.to+'.');else{const inSoft=H.from2&&H.to2&&s>=tmin(H.from2)&&e<=tmin(H.to2);out.push(inSoft?'This is your morning / Kollel time (usually kept free).':'Outside your usual hours ('+H.from+'–'+H.to+').')}}}
+ const b=bufMin();
+ busyOn(date,excl).forEach(x=>{const g=x.block?(x.gap||0):b;if(s<x.e&&e>x.s)out.push((x.block?'Blocked time: ':'Overlaps with ')+x.label+' ('+mtime(x.s)+'–'+mtime(x.e)+')');
+  else if(g>0&&s<x.e+g&&e>x.s-g)out.push('Only '+(s>=x.e?s-x.e:x.s-e)+' min from '+x.label+' ('+mtime(x.s)+'–'+mtime(x.e)+')')});
+ if(cid){const av=availFor(clOf(cid),w);if(av===false)out.push(clName(cid)+' is not available on '+DOW[w]+'.');
+  else if(av&&((av.from&&s<tmin(av.from))||(av.to&&e>tmin(av.to))))out.push(clName(cid)+' is only available '+(av.from||'…')+'–'+(av.to||'…')+'.')}
+ return out}
+function winFromH(H,soft){if(!H.on)return[];const r=[[tmin(H.from),tmin(H.to)]];if(soft&&H.from2&&H.to2)r.push([tmin(H.from2),tmin(H.to2)]);return r}
+function windowsOf(date,soft){return winFromH(hoursFor(date),soft)}
+function isSoftStart(date,t,dur){const H=hoursFor(date);return !(t>=tmin(H.from)&&t+dur<=tmin(H.to))}
+function candStarts(w,dur,step,soft){const s=new Set();winFromH(hoursOf(w),soft).forEach(([lo,hi])=>{for(let t=Math.ceil(lo/step)*step;t+dur<=hi;t+=step)s.add(t)});return [...s].sort((a,b)=>a-b)}
+function freeStarts(date,dur,cid,step,soft){const w=pd(date).getDay();if(offName(date))return[];const av=availFor(clOf(cid),w);if(av===false)return[];
+ const busy=busyOn(date),b=bufMin(),nw=new Date(),now=date===today()?nw.getHours()*60+nw.getMinutes():-1,set=new Set();
+ windowsOf(date,soft).forEach(([lo0,hi0])=>{let lo=lo0,hi=hi0;if(av){if(av.from)lo=Math.max(lo,tmin(av.from));if(av.to)hi=Math.min(hi,tmin(av.to))}
+  for(let t=Math.ceil(lo/step)*step;t+dur<=hi;t+=step){if(t<=now)continue;if(busy.every(x=>{const g=x.block?(x.gap||0):b;return !(t<x.e+g&&t+dur>x.s-g)}))set.add(t)}});
+ return [...set].sort((a,b)=>a-b)}
+function freeIn(date,lo,hi){const busy=busyOn(date).sort((a,b)=>a.s-b.s),out=[];busy.forEach(x=>{if(x.s>lo)out.push([lo,Math.min(x.s,hi)]);lo=Math.max(lo,x.e)});if(lo<hi)out.push([lo,hi]);return out.filter(r=>r[1]-r[0]>=30)}
+function freeWindows(date){const H=hoursFor(date);if(!H.on||offName(date))return null;return freeIn(date,tmin(H.from),tmin(H.to))}
+function freeLine(date){const off=offName(date);if(off)return`<div class="small mute" style="margin-top:4px">${E(off)}: no work</div>`+sunLine(date);const fw=freeWindows(date);
+ if(fw===null)return'<div class="small mute" style="margin-top:4px">Day off in your availability</div>'+sunLine(date);
+ const H=hoursFor(date);let s=`<div class="small" style="margin-top:4px">${fw.length?'Free: '+fw.map(r=>mtime(r[0])+'–'+mtime(r[1])).join(' · '):'Fully booked'}</div>`;
+ if(H.from2&&H.to2){const sw=freeIn(date,tmin(H.from2),tmin(H.to2));if(sw.length)s+=`<div class="small mute">Morning (only if needed): ${sw.map(r=>mtime(r[0])+'–'+mtime(r[1])).join(' · ')}</div>`}
+ return s+sunLine(date)}
+function availLine(c){const k=Object.keys(c.avail||{}).sort();return k.length?`<div class="small mute">Available: ${k.map(w=>DOW[w]+' '+((c.avail[w].from||'…')+'–'+(c.avail[w].to||'…'))).join(' · ')}</div>`:''}
+function parseAvail(d){const a={};for(let w=0;w<7;w++){const f=d['avf'+w],t=d['avt'+w];if(f||t)a[w]={from:f||'',to:t||''}}return a}
+function slotWarn(){const f=document.getElementById('evf'),w=document.getElementById('slotwarn');if(!f||!f.date||!w)return;
+ if(f.status.value==='cancelled'||!f.start.value){w.innerHTML='';return}
+ const m=slotIssues(f.date.value,f.start.value,f.end.value,f.client.value==='__new'?'':f.client.value,f.dataset.id||null,f.jt.value);
+ w.innerHTML=m.length?m.map(x=>'<div style="color:var(--bad)">⚠ '+E(x)+'</div>').join(''):'<span style="color:var(--ok)">✓ Free at this time</span>'}
+/* things that now clash (blocks changed, clocks changed, a new job came in) */
+function problemsList(){const t0=today(),t1=addDays(t0,45),out=[];
+ S.events.filter(e=>e.date>=t0&&e.date<=t1&&e.status!=='cancelled'&&e.start&&!e.noinv&&['session','hourly'].includes(jtOf(e.jt).mode)).sort(byDT).forEach(e=>{
+  const m=slotIssues(e.date,e.start,e.end,e.client,e.id,e.jt).filter(x=>!x.startsWith('Only ')&&!x.startsWith('This is your morning'));if(m.length)out.push({e,m})});return out}
+function problemsCard(){const L=problemsList();if(!L.length)return'';
+ return `<div class="card" style="border-color:var(--bad)"><h2>Needs attention (${L.length})</h2>${L.slice(0,8).map(({e,m})=>`<div class="ev"><div class="bar" style="background:${jtOf(e.jt).color}"></div><div class="sp"><b>${E(e.title||jtOf(e.jt).name)}</b>${e.client?' · '+E(clName(e.client)):''}<div class="small mute">${DOW[pd(e.date).getDay()]} ${shortD(e.date)}, ${E(e.start)}</div>${m.map(x=>`<div class="small" style="color:var(--bad)">⚠ ${E(x)}</div>`).join('')}</div><div style="text-align:end"><button class="b s" data-a="evedit" data-v="${e.id}">Edit</button><br><button class="b s" data-a="mrone" data-v="${e.id}">Move…</button></div></div>`).join('')}${L.length>8?`<div class="small mute">…and ${L.length-8} more</div>`:''}</div>`}
+/* find a time */
+function fdState(){if(!ui.fd){const jt=S.jobTypes.find(j=>j.mode==='session')||S.jobTypes[0];ui.fd={cl:'',jt:jt?jt.id:'',dur:'',from:today(),days:'7',mode:'once',weeks:'8',after:'',before:'',soft:''}}return ui.fd}
+function vFind(){const f=fdState(),jt=jtOf(f.jt),dur=+f.dur||jt.duration||60,step=stepMin(),c=clOf(f.cl),soft=!!f.soft;
+ const okT=t=>(!f.after||t>=tmin(f.after))&&(!f.before||t+dur<=tmin(f.before));const wk=f.mode==='weekly';
+ const ctl=`<div class="card"><h2>Find a time</h2>${f.rf&&S.events.find(x=>x.id===f.rf)?`<div class="small" style="margin-bottom:8px"><b>Rescheduling</b> ${E(clName(S.events.find(x=>x.id===f.rf).client))}'s lesson from ${fdate(S.events.find(x=>x.id===f.rf).date)}. Tap a time to book it.</div>`:''}<div class="g2">
+ <div><label>Student / client</label><select data-ch="fd" name="cl">${opts([['','(anyone)'],...[...S.clients].sort((a,b)=>a.name.localeCompare(b.name)).map(x=>[x.id,x.name])],f.cl)}</select></div>
+ <div><label>Job type</label><select data-ch="fd" name="jt">${opts(S.jobTypes.map(j=>[j.id,j.name]),f.jt)}</select></div>
+ <div><label>Length (minutes)</label><input type="number" data-ch="fd" name="dur" value="${E(f.dur)}" placeholder="${jt.duration||60}"></div>
+ <div><label>Look from</label><input type="date" data-ch="fd" name="from" value="${f.from}"></div>
+ <div><label>Not earlier than</label><input type="time" data-ch="fd" name="after" value="${f.after}"></div>
+ <div><label>Finish by</label><input type="time" data-ch="fd" name="before" value="${f.before}"></div>
+ <div><label>Mornings (Kollel time)</label><select data-ch="fd" name="soft">${opts([['','Not now'],['1','Include if needed']],f.soft)}</select></div>
+ <div><label>Show me</label><select data-ch="fd" name="mode">${opts([['once','Free times, day by day'],['weekly','A weekly slot that is free every week']],f.mode)}</select></div>
+ <div><label>${wk?'Weeks to check':'Days to show'}</label><input type="number" data-ch="fd" name="${wk?'weeks':'days'}" value="${wk?f.weeks:f.days}"></div></div>
+ <div class="small mute" style="margin-top:8px">Checks your teaching hours, blocked times (davening, shiur), every entry (with a ${bufMin()} min gap), Shabbat and Yom Tov${c?', and when '+E(c.name)+' is available':''}. Dashed times are mornings.</div></div>`;
+ let out='';
+ if(!wk){const n=Math.max(1,Math.min(31,+f.days||7));let any=false;
+  for(let i=0;i<n;i++){const dt=addDays(f.from,i),w=pd(dt).getDay(),off=offName(dt),H=hoursFor(dt),st=(off||!H.on)?[]:freeStarts(dt,dur,f.cl,step,soft).filter(okT);if(st.length)any=true;
+   out+=`<div class="ev"><div class="sp"><b>${DOW[w]} ${fdate(dt)}</b>${off?` <span class="tag">${E(off)}</span>`:(!H.on?' <span class="tag">day off</span>':'')}<div class="row" style="margin-top:4px">${st.length?st.map(t=>`<button class="b s${isSoftStart(dt,t,dur)?' soft':''}" data-a="pick" data-v="${dt}|${t}">${mtime(t)}</button>`).join(''):'<span class="small mute">No free time</span>'}</div></div></div>`}
+  out=`<div class="card"><div class="small mute" style="margin-bottom:6px">Tap a start time (${dur} min) to book it.${any?'':' Nothing is free in this period: try other dates or relax the limits.'}</div>${out}</div>`}
+ else{const weeks=Math.max(1,Math.min(26,+f.weeks||8)),cache={},fs=dt=>cache[dt]||(cache[dt]=freeStarts(dt,dur,f.cl,step,soft));let any=false;
+  for(let w=0;w<7;w++){const H=hoursOf(w);if(!H.on)continue;let d0=f.from;while(pd(d0).getDay()!==w)d0=addDays(d0,1);
+   const occ=[];for(let i=0;occ.length<weeks&&i<weeks*2+6;i++){const dt=addDays(d0,i*7);if(!offName(dt))occ.push(dt)}if(!occ.length)continue;
+   const cands=[];candStarts(w,dur,step,soft).forEach(t=>{if(!okT(t))return;cands.push({t,busy:occ.filter(dt=>!fs(dt).includes(t))})});
+   let list=cands.filter(x=>!x.busy.length),partial=false;if(!list.length&&occ.length>1){list=cands.filter(x=>x.busy.length===1);partial=true}
+   if(!list.length)continue;any=true;
+   out+=`<div class="ev"><div class="sp"><b>${DOW[w]}</b> <span class="small mute">from ${fdate(occ[0])}, ${occ.length} week${occ.length===1?'':'s'}</span><div class="row" style="margin-top:4px">${list.map(x=>`<button class="b s${isSoftStart(occ[0],x.t,dur)?' soft':''}" data-a="pickw" data-v="${occ[0]}|${x.t}|${occ.length}">${mtime(x.t)}${partial?' (not '+shortD(x.busy[0])+')':''}</button>`).join('')}</div>${partial?'<div class="small mute">No time is free every week; these are free all but one week.</div>':''}</div></div>`}
+  out=`<div class="card"><div class="small mute" style="margin-bottom:6px">Times that stay free on the same weekday for ${weeks} weeks (Shabbat and Yom Tov weeks skipped). Tap one to book the whole series.</div>${any?out:'<div class="mute">No weekly slot fits all of you in this period. Try fewer weeks, a wider time window, or check the student\'s available days.</div>'}</div>`}
+ return ctl+out}
+/* make room: cancel lessons in the way, find new times, write to the students */
+function mrAffected(date,from,to,excl){const a=tmin(from),b=tmin(to);
+ return S.events.filter(e=>e.date===date&&e.id!==excl&&e.status!=='cancelled'&&e.start&&!e.inv&&['session','hourly'].includes(jtOf(e.jt).mode)).filter(e=>{const s=tmin(e.start),en=e.end?tmin(e.end):s+(jtOf(e.jt).duration||60);return s<b&&en>a}).sort(byDT)}
+function openMR(o){ui.mr=Object.assign({date:ui.sel,from:'',to:'',reason:'Urgent call',excl:null,inc:0,sel:{},step:1,done:[],soft:false},o||{});mrRender()}
+function mrItemInfo(it){const e=S.events.find(x=>x.id===it.id),c=clOf(e.client),dur=(e.start&&e.end)?Math.max(15,tmin(e.end)-tmin(e.start)):(jtOf(e.jt).duration||60);return{e,c,dur}}
+function suggestSlots(cid,dur,soft,orig,blk){const out=[];for(let i=0;i<21&&out.length<8;i++){const dt=addDays(today(),i);let st=freeStarts(dt,dur,cid,stepMin(),soft);
+  if(blk&&dt===blk.date)st=st.filter(t=>!(t<blk.b&&t+dur>blk.a));if(!st.length)continue;let best=st[0];st.forEach(t=>{if(Math.abs(t-orig)<Math.abs(best-orig))best=t});out.push({dt,t:best})}return out}
+function mrMsg(it,sugg){const {e,c}=mrItemInfo(it),first=(c?c.name:'').split(' ')[0]||'there',when=DOW[pd(e.date).getDay()]+' '+shortD(e.date)+' at '+e.start;
+ const nw=S.events.find(x=>x.reschedFrom===it.id&&x.status!=='cancelled');
+ if(nw)return `Hi ${first}, I've moved our lesson from ${when} to ${DOW[pd(nw.date).getDay()]} ${shortD(nw.date)} at ${nw.start}. Please let me know if that doesn't work for you.`;
+ const list=sugg.slice(0,3).map(s=>DOW[pd(s.dt).getDay()]+' '+shortD(s.dt)+' at '+mtime(s.t)).join(', ');
+ return `Hi ${first}, I'm sorry, something urgent came up and I need to move our lesson on ${when}.${list?' Would one of these work for you: '+list+'?':' When would suit you instead?'} Thank you for understanding.`}
+function mrRender(){const r=ui.mr,cur=S.settings.currency,M=n=>money(n,cur,'en'),mEl=document.getElementById('modal'),keep=mEl?mEl.scrollTop:0;
+ if(r.step===1){const aff=(r.from&&r.to)?mrAffected(r.date,r.from,r.to,r.excl):[],selIds=aff.filter(e=>(r.sel||{})[e.id]!==false),val=selIds.reduce((n,e)=>n+amountOf(e),0);
+  modal(`<h2>Make room</h2><p class="small mute">Choose the time you need free. Lessons in the way can be cancelled by you (never charged) and moved.</p>
+  <div class="g2"><div><label>Date</label><input type="date" data-ch="mr" name="date" value="${r.date}"></div><div><label>Reason (kept in the record)</label><input data-ch="mr" name="reason" value="${E(r.reason)}"></div>
+  <div><label>From</label><input type="time" data-ch="mr" name="from" value="${r.from}"></div><div><label>Until</label><input type="time" data-ch="mr" name="to" value="${r.to}"></div></div>
+  ${(r.from&&r.to)?(aff.length?`<label>Lessons in the way</label>${aff.map(e=>`<label style="display:flex;gap:8px;align-items:center;color:var(--ink);margin:6px 0"><input type="checkbox" style="width:auto" data-ch="mrsel" data-id="${e.id}"${(r.sel||{})[e.id]===false?'':' checked'}><span class="sp">${E(e.start)}${e.end?'–'+E(e.end):''} · ${E(clName(e.client))}</span><b>${M(amountOf(e))}</b></label>`).join('')}
+   <div class="small mute">${r.inc?'This job: '+M(r.inc)+'. ':''}Lessons moved: ${selIds.length} (${M(val)}, earned once they take place).</div>`:'<div class="mute" style="margin:8px 0">No lessons in the way.</div>'):''}
+  <div class="row" style="margin-top:12px"><button class="b p" data-a="mrgo"${selIds.length?'':' disabled'}>Cancel ${selIds.length||''} lesson${selIds.length===1?'':'s'} &amp; find new times</button><button class="b" data-a="close">Close</button></div>`)}
+ else{modal(`<h2>New times</h2><p class="small mute">Cancelled by you, not charged. Reason: ${E(r.reason)}.</p>
+  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" style="width:auto" data-ch="mrsoft"${r.soft?' checked':''}>Include morning (Kollel) times</label>
+  ${r.done.map(it=>{const {e,c,dur}=mrItemInfo(it),nw=S.events.find(x=>x.reschedFrom===it.id&&x.status!=='cancelled'),sugg=suggestSlots(e.client,dur,r.soft,tmin(e.start),{date:r.date,a:tmin(r.from),b:tmin(r.to)}),msg=it.msg?it.msg:mrMsg(it,sugg),wa=waLink(c,msg);
+   return `<div class="card" style="margin:10px 0 0"><div class="row"><b class="sp">${E(clName(e.client))}</b><span class="tag bad">cancelled by you</span></div><div class="small mute">${DOW[pd(e.date).getDay()]} ${shortD(e.date)}, ${E(e.start)}</div>
+   ${nw?`<div class="small" style="color:var(--ok);margin-top:4px">✓ Moved to ${DOW[pd(nw.date).getDay()]} ${shortD(nw.date)}, ${E(nw.start)}</div>`:''}
+   <div class="small mute" style="margin-top:6px">${nw?'Change it:':'Pick a new time:'}</div><div class="row" style="margin-top:4px">${sugg.length?sugg.map(s=>`<button class="b s${isSoftStart(s.dt,s.t,dur)?' soft':''}" data-a="mrbook" data-v="${it.id}|${s.dt}|${s.t}">${DOW[pd(s.dt).getDay()]} ${shortD(s.dt)} · ${mtime(s.t)}</button>`).join(''):'<span class="small mute">No free time in the next 3 weeks. Check the student\'s available days or include mornings.</span>'}</div>
+   <textarea id="mrmsg_${it.id}" data-ch="mrmsg" data-id="${it.id}" style="min-height:96px;margin-top:8px">${E(msg)}</textarea>
+   <div class="row" style="margin-top:6px"><button class="b s" data-a="mrcopy" data-v="${it.id}">Copy message</button>${wa?`<button class="b s" data-a="mrwa" data-v="${it.id}">WhatsApp</button>`:'<span class="small mute">Add a phone number on the student to send by WhatsApp.</span>'}</div></div>`}).join('')}
+  <div class="row" style="margin-top:12px"><button class="b p" data-a="close">Done</button></div>`)}
+ if(mEl)mEl.scrollTop=keep}
+function waLink(c,text){if(!c||!c.phone)return'';let p=String(c.phone).replace(/[^\d+]/g,'');if(p.startsWith('+'))p=p.slice(1);else if(p.startsWith('00'))p=p.slice(2);else if(p.startsWith('0'))p='31'+p.slice(1);return p?'https://wa.me/'+p+'?text='+encodeURIComponent(text):''}
+function excText(x){const rng=x.from===x.to?fdate(x.from):fdate(x.from)+' – '+fdate(x.to),k=(x.key||'').split('|');
+ const what=x.type==='off'?('No teaching'+(x.label?': '+x.label:'')):x.type==='hours'?('Hours '+x.start+'–'+x.end):x.type==='block'?((x.label||'Blocked')+' '+x.start+'–'+x.end):('Skip '+(k[0]||'block')+(k[1]==='sunset'?' (sunset block)':k[1]?' '+k[1]+'–'+k[2]:''));return rng+' · '+what}
+function excLine(date){const ex=excOn(date);return`<div class="row" style="margin-top:6px">${ex.map(x=>`<span class="tag">${E(excText(x))} <a href="#" data-a="excdel" data-v="${x.id}" style="color:var(--bad);text-decoration:none">✕</a></span>`).join('')}<button class="b s" data-a="excnew" data-v="${date}">Change this day…</button></div>`}
+function excSettingsList(){const l=(S.settings.exc||[]).filter(x=>(x.to||x.from)>=today()).sort((a,b)=>a.from.localeCompare(b.from));
+ return`<h3 style="margin:14px 0 6px;font-size:14px">Upcoming exceptions</h3>${l.length?l.map(x=>`<div class="row" style="margin:4px 0"><span class="sp small">${E(excText(x))}</span><button class="b s d" data-a="excdel" data-v="${x.id}">Remove</button></div>`).join(''):'<div class="small mute">None. Use "Change this day…" on the Calendar to add one.</div>'}`}
+function excForm(date){const w=pd(date).getDay(),regs=blocksOf().filter(b=>blockApplies(b,date));
+ modal(`<h2>Change ${DOW[w]} ${fdate(date)}</h2><form id="excf" data-date="${date}">
+ <label>What changes?</label><select name="type" data-ch="exctype">${opts([['off','No teaching (day off / away)'],['hours','Different hours'],['block','Extra blocked time'],...(regs.length?[['unblock','Skip a regular block (e.g. shiur cancelled)']]:[])],'off')}</select>
+ <div id="exc_label"><label id="exc_ll">Reason (optional)</label><input name="label"></div>
+ <div class="g2" id="exc_time"><div><label>From</label><input type="time" name="start"></div><div><label>To</label><input type="time" name="end"></div></div>
+ <div id="exc_key"><label>Which block?</label><select name="key">${regs.map(b=>`<option value="${E(bkey(b))}">${E((b.label||'Blocked')+' '+(b.mode==='sunset'?'(sunset '+((+b.off||0)>0?'+':'')+(+b.off||0)+' min)':b.from+'–'+b.to))}</option>`).join('')}</select></div>
+ <label>Through date (empty = just this day)</label><input type="date" name="to" value="">
+ <div class="row" style="margin-top:12px"><button class="b p" type="submit">Save</button><button class="b" type="button" data-a="close">Cancel</button></div></form>`);excUI()}
+function excUI(){const f=document.getElementById('excf');if(!f||!f.type)return;const t=f.type.value,sh=(id,on)=>{const el=document.getElementById(id);if(el)el.style.display=on?'':'none'};
+ sh('exc_label',t!=='unblock');sh('exc_time',t==='hours'||t==='block');sh('exc_key',t==='unblock');const l=document.getElementById('exc_ll');if(l)l.textContent=t==='block'?'Label (e.g. Dentist)':'Reason (optional)'}
+function lastPay(c){return (c.payments||[]).reduce((m,p)=>p.date>m?p.date:m,'')}
+function ledger(c){const items=[];S.events.filter(e=>e.client===c.id&&jtOf(e.jt).trackOnly&&e.date<=today()).forEach(e=>items.push({d:e.date,t:0,e}));
+ (c.payments||[]).forEach(p=>items.push({d:p.date,t:1,p}));items.sort((a,b)=>a.d.localeCompare(b.d)||a.t-b.t);
+ const r2=n=>Math.round(n*100)/100;let bal=+c.openBal||0,charged=0,paid=0,held=0;
+ const rows=items.map(it=>{if(it.e){const a=counts(it.e)?amountOf(it.e):0;charged=r2(charged+a);bal=r2(bal+a);if(it.e.status!=='cancelled')held++;return{...it,amt:a,bal}}
+  const a=+it.p.amount||0;paid=r2(paid+a);bal=r2(bal-a);return{...it,amt:a,bal}});
+ return{rows,charged,paid,bal,held,open:+c.openBal||0,has:items.some(i=>i.e)}}
+function sessionsSince(c){const lp=lastPay(c);return S.events.filter(e=>e.client===c.id&&jtOf(e.jt).mode==='session'&&counts(e)&&e.date<=today()&&(!lp||e.date>lp))}
+function sinceLast(c){return sessionsSince(c).reduce((n,e)=>n+qtyOf(e),0)}
+
+/* ---------- modal ---------- */
+function modal(h){const m=document.getElementById('modal');m.innerHTML='<div class="mb">'+h+'</div>';m.classList.add('on');m.scrollTop=0}
+function closeModal(){const m=document.getElementById('modal');m.classList.remove('on');m.innerHTML=''}
+document.getElementById('modal').addEventListener('mousedown',e=>{if(e.target.id==='modal')closeModal()});
+
+/* ---------- views ---------- */
+const TABS=[['cal','Calendar'],['find','Find a time'],['log','Log'],['inv','Invoices & reports'],['cli','Clients & students'],['jobs','Job types'],['set','Settings']];
+function render(){
+ document.getElementById('nav').innerHTML=TABS.map(([k,l])=>`<button class="${ui.tab===k?'on':''}" data-a="tab" data-v="${k}">${l}</button>`).join('');
+ document.getElementById('main').innerHTML=({cal:vCal,find:vFind,log:vLog,inv:vInv,cli:vCli,jobs:vJobs,set:vSet})[ui.tab]();
+}
+function vCal(){
+ const m=ui.month,y=m.getFullYear(),mo=m.getMonth(),first=new Date(y,mo,1),start=new Date(y,mo,1-first.getDay());
+ let cells='';
+ for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);const s=ymd(d);
+  const evs=S.events.filter(e=>e.date===s&&e.status!=='cancelled').sort(byDT);
+  cells+=`<div class="cell${d.getMonth()!==mo?' out':''}${s===ui.sel?' sel':''}${s===today()?' today':''}" data-a="sel" data-v="${s}"><span class="n">${d.getDate()}</span>`+
+   evs.slice(0,3).map(e=>`<div class="chip" style="background:${jtOf(e.jt).color}">${E((e.start||'')+' '+(e.title||jtOf(e.jt).name))}</div>`).join('')+
+   (evs.length>3?`<div class="small mute">+${evs.length-3}</div>`:'')+
+   `<div class="dots">${evs.map(e=>`<i style="background:${jtOf(e.jt).color}"></i>`).join('')}</div></div>`}
+ const dn=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(x=>`<div class="dh">${x}</div>`).join('');
+ const dayEvs=S.events.filter(e=>e.date===ui.sel).sort(byDT);
+ return problemsCard()+`<div class="card"><div class="row"><button class="b" data-a="mon" data-v="-1">‹</button><b class="sp" style="text-align:center">${m.toLocaleDateString('en',{month:'long',year:'numeric'})}</b><button class="b" data-a="mon" data-v="1">›</button><button class="b" data-a="mon" data-v="0">Today</button></div>
+ <div class="cal" style="margin-top:8px">${dn}${cells}</div></div>
+ <div class="card"><div class="row"><h2 class="sp">${pd(ui.sel).toLocaleDateString('en',{weekday:'long',day:'numeric',month:'long'})}</h2><button class="b" data-a="mropen">Make room</button><button class="b p" data-a="evnew">+ Add</button></div>
+ ${dayEvs.length?dayEvs.map(evRow).join(''):'<div class="mute">Nothing scheduled.</div>'}
+ <div class="small mute" style="margin-top:6px">Day total: ${money(dayEvs.filter(counts).reduce((n,e)=>n+amountOf(e),0),S.settings.currency,'en')}</div>${freeLine(ui.sel)}${excLine(ui.sel)}</div>`+quickLog()}
+function quickLog(){const hint=pd(ui.sel).getDay()===6?'Shabbat':hebHoliday(ui.sel);
+ return S.jobTypes.filter(j=>j.mode==='daystudent').map(j=>{const cur=S.events.find(e=>e.date===ui.sel&&e.jt===j.id&&e.status!=='cancelled'),away=S.events.find(e=>e.date===ui.sel&&e.jt===j.id&&e.status==='cancelled');
+  return `<div class="card"><h2>Quick log: ${E(j.name)}</h2>${hint?`<div class="small mute" style="margin-bottom:6px">${E(hint)}: usually not there.</div>`:''}
+  <div class="small mute" style="margin-bottom:6px">Number of students today:</div><div class="row">${[0,1,2,3,4,5,6,7,8].map(n=>`<button class="b s${cur&&+cur.qty===n&&cur.qty!==''?' p':''}" data-a="qlog" data-v="${j.id}|${n}">${n}</button>`).join('')}<button class="b s" data-a="qlog" data-v="${j.id}|?">More…</button></div>
+  <div class="row" style="margin-top:8px"><button class="b s${away?' p':''}" data-a="qaway" data-v="${j.id}">Not there${away&&(away.notes||away.title)?': '+E(away.notes||away.title):''}</button>${cur||away?`<button class="b s d" data-a="qclear" data-v="${j.id}">Clear</button>`:''}</div></div>`}).join('')}
+function applyCancel(id,d){const e=S.events.find(x=>x.id===id);if(!e)return null;
+ e.status='cancelled';e.cancelBy=d.by;e.cancelReason=(d.reason||'').trim();e.charge=d.by==='them'&&!!d.charge;e.cancelFee=e.charge?(d.fee||''):'';let nid=null;
+ if(d.resched){const n={...e,id:uid(),date:d.resched,status:'active',cancelBy:'',cancelReason:'',charge:false,cancelFee:'',reschedFrom:e.id};delete n.inv;delete n.reschedTo;S.events.push(n);e.reschedTo=d.resched;nid=n.id}
+ save();return nid}
+function lastClient(jid){const l=[...S.events].filter(e=>e.jt===jid&&e.client).sort(byDT).pop();if(l)return l.client;const c=S.clients.find(c=>c.name===jtOf(jid).name);return c?c.id:''}
+function dayEntries(jid){return S.events.filter(e=>e.date===ui.sel&&e.jt===jid)}
+function cancelTags(e){if(e.status!=='cancelled')return'';const who=e.cancelBy==='me'?'cancelled by you':e.cancelBy==='them'?'cancelled by them':'cancelled';
+ return `<span class="tag bad">${who}</span>${e.cancelBy==='them'&&e.charge?`<span class="tag">charged ${money(amountOf(e),S.settings.currency,'en')}</span>`:(e.cancelBy?'<span class="tag ok">not charged</span>':'')}${e.reschedTo?`<span class="tag ok">moved to ${fdate(e.reschedTo)}</span>`:''}${e.cancelReason?`<span class="small mute">${E(e.cancelReason)}</span>`:''}`}
+function evRow(e){const jt=jtOf(e.jt),cf=conflicts(e);
+ return `<div class="ev"><div class="bar" style="background:${jt.color}"></div><div class="sp">
+ <div><b>${E(e.title||jt.name)}</b> <span class="mute small">${E(jt.name)}${e.client?' · '+E(clName(e.client)):''}</span></div>
+ <div class="small mute">${E(e.start||'')}${e.end?'–'+E(e.end):''}${jt.mode==='daystudent'?` · ${qtyOf(e)} students`:''}${jt.mode==='session'&&qtyOf(e)!==1?` · ${qtyOf(e)} lessons`:''}${jt.mode==='hourly'?` · ${qtyOf(e)} h`:''}</div>
+ ${e.place?`<div class="small mute">📍 ${E(e.place)}</div>`:''}${e.notes?`<div class="small">${E(e.notes)}</div>`:''}
+ <div class="row" style="margin-top:4px">${cancelTags(e)}${cf?'<span class="tag bad">⚠ overlaps</span>':''}${e.inv?'<span class="tag ok">invoiced</span>':''}${e.noinv?'<span class="tag">record only</span>':''}</div></div>
+ <div style="text-align:end"><b>${counts(e)?money(amountOf(e),S.settings.currency,'en'):'—'}</b><br><button class="b s" data-a="evedit" data-v="${e.id}">Edit</button> ${e.status==='cancelled'?`<button class="b s" data-a="restore" data-v="${e.id}">Restore</button>`:`<button class="b s" data-a="cancel" data-v="${e.id}">Cancel…</button>`}</div></div>`}
+
+function evForm(id,date,pre){
+ const ev=id?S.events.find(e=>e.id===id):{jt:S.jobTypes[0]?.id,date:date||ui.sel,start:'',end:'',client:'',title:'',notes:'',qty:'',rate:'',status:'active',place:'',noinv:false,cancelBy:'',cancelReason:'',charge:false,cancelFee:''};
+ if(!id&&pre)Object.assign(ev,pre);
+ const jt=jtOf(ev.jt);
+ modal(`<h2>${id?'Edit':'New'} entry</h2><form id="evf" data-id="${id||''}"><input type="hidden" name="reschedFrom" value="${E(ev.reschedFrom||'')}">
+ <label>Job type</label><select name="jt" data-ch="evjt">${opts(S.jobTypes.map(j=>[j.id,j.name]),ev.jt)}</select>
+ <div class="g2"><div><label>Date</label><input type="date" name="date" value="${ev.date}" required></div>
+ <div><label>Client / bill to</label><select name="client" data-ch="evcl">${opts([['','(none)'],...S.clients.map(c=>[c.id,c.name]),['__new','+ New client…']],ev.client)}</select></div></div>
+ <div class="g2"><div><label>Start</label><input type="time" name="start" data-ch="evstart" value="${ev.start||''}"></div><div><label>End</label><input type="time" name="end" value="${ev.end||''}"></div></div>
+ <div id="slotwarn" class="small" style="margin-top:6px"></div>
+ <label>Title</label><input name="title" list="pre" value="${E(ev.title)}">
+ <label>Location (e.g. Muiderberg, Rotterdam, Schiphol)</label><input name="place" list="plc" value="${E(ev.place)}"><datalist id="plc">${[...new Set(S.events.map(x=>x.place).filter(Boolean))].map(s=>`<option value="${E(s)}">`).join('')}</datalist><datalist id="pre">${(jt.presets||'').split(',').map(s=>s.trim()).filter(Boolean).map(s=>`<option value="${E(s)}">`).join('')}</datalist>
+ <div class="g2"><div id="qtyw"><label id="qtyl"></label><input type="number" step="any" min="0" name="qty" value="${ev.qty??''}"></div>
+ <div><label>Price for this job (empty = standard rate)</label><input type="number" step="any" name="rate" value="${ev.rate??''}"></div></div>
+ <label>Notes</label><textarea name="notes">${E(ev.notes)}</textarea>
+ <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="noinv" style="width:auto"${ev.noinv?' checked':''}>Record only: someone else invoices this (e.g. JBW bills NIHS)</label>
+ <label>Status</label><select name="status">${opts([['active','Active'],['cancelled','Cancelled']],ev.status||'active')}</select>
+ <div class="g2"><div><label>If cancelled: by whom</label><select name="cancelBy">${opts([['','—'],['me','I cancelled'],['them','They cancelled']],ev.cancelBy||'')}</select></div><div><label>Reason</label><input name="cancelReason" value="${E(ev.cancelReason)}"></div></div>
+ <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="charge" style="width:auto"${ev.charge?' checked':''}>They cancelled and I still charge for it</label>
+ <label>Cancellation fee (empty = full price)</label><input type="number" step="any" name="cancelFee" value="${ev.cancelFee??''}">
+ ${id?'':`<div class="g2"><div><label>Repeat</label><select name="rep">${opts([['none','Once'],['day','Every day (skips Saturday)'],['week','Every week']],(pre&&pre.rep)||'none')}</select></div><div><label>Times (total)</label><input type="number" name="cnt" min="1" max="120" value="${(pre&&pre.cnt)||4}"></div></div>`}
+ <div class="row" style="margin-top:12px"><button class="b p" type="submit">Save</button><button class="b" type="button" data-a="close">Cancel</button><span class="sp"></span>${id?'<button class="b d" type="button" data-a="evdel" data-v="'+id+'">Delete</button>':''}</div></form>`);
+ qtyUI();slotWarn()}
+function qtyUI(){const f=document.getElementById('evf');if(!f)return;const m=jtOf(f.jt.value).mode;
+ document.getElementById('qtyw').style.display=m==='flat'?'none':'';
+ {const jt=jtOf(f.jt.value),cl=clOf(f.client.value),std=(cl&&cl.rates&&cl.rates[jt.id]!==undefined&&cl.rates[jt.id]!=='')?cl.rates[jt.id]:jt.rate;f.rate.placeholder='Standard: '+(std||0)}
+ document.getElementById('qtyl').textContent=({hourly:'Hours (if no start/end time)',session:'Number of lessons (default 1)',daystudent:'Number of students that day'})[m]||''}
+
+function logRows(){const f=ui.f,q=(f.q||'').toLowerCase();
+ return S.events.filter(e=>(!f.jt||e.jt===f.jt)&&(!f.cl||e.client===f.cl)&&(!f.pl||e.place===f.pl)&&(!f.st||(f.st==='cx'?e.status==='cancelled':f.st==='me'?(e.status==='cancelled'&&e.cancelBy==='me'):f.st==='them'?(e.status==='cancelled'&&e.cancelBy==='them'):(e.status==='cancelled'&&!!e.charge)))&&(!f.from||e.date>=f.from)&&(!f.to||e.date<=f.to)&&(!q||((e.title||'')+' '+(e.notes||'')+' '+(e.place||'')+' '+clName(e.client)).toLowerCase().includes(q))).sort((a,b)=>byDT(b,a))}
+function vLog(){const f=ui.f,rows=logRows(),cur=S.settings.currency,tot=rows.filter(e=>counts(e)&&e.date<=today()).reduce((n,e)=>n+amountOf(e),0);
+ const places=[...new Set(S.events.map(e=>e.place).filter(Boolean))].sort();
+ return `<div class="card"><h2>Log of all work</h2><div class="g2">
+ <div><label>Job type</label><select data-ch="lf" name="jt">${opts([['','All'],...S.jobTypes.map(j=>[j.id,j.name])],f.jt)}</select></div>
+ <div><label>Client</label><select data-ch="lf" name="cl">${opts([['','All'],...S.clients.map(c=>[c.id,c.name])],f.cl)}</select></div>
+ <div><label>Location</label><select data-ch="lf" name="pl">${opts([['','All'],...places.map(x=>[x,x])],f.pl)}</select></div>
+ <div><label>Cancellations</label><select data-ch="lf" name="st">${opts([['','All entries'],['cx','Any cancellation'],['me','Cancelled by me'],['them','Cancelled by them'],['chg','Charged cancellations']],f.st||'')}</select></div>
+ <div><label>Search</label><input data-ch="lf" name="q" value="${E(f.q)}" placeholder="name, place, note"></div>
+ <div><label>From</label><input type="date" data-ch="lf" name="from" value="${f.from}"></div><div><label>To</label><input type="date" data-ch="lf" name="to" value="${f.to}"></div></div>
+ <div class="row" style="margin-top:10px"><span class="sp"><b>${rows.length}</b> entries · past, not cancelled: <b>${money(tot,cur,'en')}</b></span><button class="b" data-a="csv">Export CSV</button></div></div>
+ <div class="card">${rows.length?rows.map(e=>{const jt=jtOf(e.jt),inv=S.invoices.find(i=>i.id===e.inv);return `<div class="ev"><div class="bar" style="background:${jt.color}"></div><div class="sp"><div><b>${E(e.title||jt.name)}</b></div><div class="small mute">${fdate(e.date)} · ${E(jt.name)}${e.client?' · '+E(clName(e.client)):''}${e.place?' · 📍 '+E(e.place):''}</div><div class="row">${cancelTags(e)}${inv?`<span class="tag ok">${E(inv.number)}</span>`:''}${e.noinv?'<span class="tag">record only</span>':''}</div></div><div style="text-align:end"><b>${counts(e)?money(amountOf(e),cur,'en'):'—'}</b><br><button class="b s" data-a="evedit" data-v="${e.id}">Edit</button></div></div>`}).join(''):'<div class="mute">Nothing matches.</div>'}</div>`}
+function vInv(){
+ const ps=S.jobTypes.filter(j=>S.events.some(e=>e.jt===j.id&&!e.inv&&billable(e)));
+ let jt=ui.inv.jt&&ps.find(j=>j.id===ui.inv.jt)?ui.inv.jt:(ps[0]?.id||'');
+ const cls=[...new Set(S.events.filter(e=>e.jt===jt&&!e.inv&&billable(e)).map(e=>e.client))];
+ let cl=cls.includes(ui.inv.cl)?ui.inv.cl:(cls[0]??'');
+ const evs=S.events.filter(e=>e.jt===jt&&e.client===cl&&!e.inv&&billable(e)).sort(byDT);
+ const J=jtOf(jt),lang=J.lang||S.settings.lang,cur=J.cur||S.settings.currency;
+ const form=ps.length?`<div class="g2"><div><label>Job type</label><select data-ch="ijt">${opts(ps.map(j=>[j.id,j.name]),jt)}</select></div>
+ <div><label>Bill to</label><select data-ch="icl">${opts(cls.map(c=>[c,clName(c)]),cl)}</select></div>
+ <div><label>Invoice language</label><select id="ilang">${opts(Object.entries(LANGS),lang)}</select></div>
+ <div><label>Currency</label><select id="icur">${opts(CURS.map(c=>[c,c]),cur)}</select></div></div>
+ <label>Entries to include</label>${evs.map(e=>`<label style="display:flex;gap:8px;align-items:center;color:var(--ink);margin:4px 0"><input type="checkbox" style="width:auto" class="ic" value="${e.id}" checked><span class="sp">${fdate(e.date)} — ${E(e.title||J.name)}${e.status==='cancelled'?' <span class="tag">cancelled by them, charged</span>':''}</span><b>${money(amountOf(e),cur,'en')}</b></label>`).join('')}
+ <div class="g2"><div><label>Extra line (optional)</label><input id="xd" placeholder="Description"></div><div><label>Extra amount</label><input id="xa" type="number" step="any"></div></div>
+ <div class="row" style="margin-top:10px"><button class="b p" data-a="mkinv">${layoutOf(J,clOf(cl))==='attendance'?'Create report':'Create invoice'}</button></div>`
+ :'<div class="mute">Nothing to invoice yet. Entries dated today or earlier that are not cancelled and not yet invoiced will show up here.</div>';
+ const list=[...S.invoices].sort((a,b)=>b.date.localeCompare(a.date)||b.number.localeCompare(a.number));
+ return `<div class="card"><h2>New invoice or report</h2>${form}</div>
+ <div class="card"><h2>Invoices &amp; reports</h2>${list.length?list.map(i=>`<div class="ev"><div class="bar" style="background:${jtOf(i.jt).color}"></div><div class="sp"><b>${E(i.number)}</b> · ${E(i.to.name||'')}<div class="small mute">${fdate(i.date)} · ${E(jtOf(i.jt).name)}</div></div><div style="text-align:end"><b>${money(i.total,i.cur,'en')}</b><br><span class="tag ${i.paid?'ok':'bad'}">${i.paid?'paid':'unpaid'}</span> <button class="b s" data-a="invopen" data-v="${i.id}">Open</button></div></div>`).join(''):'<div class="mute">No invoices yet.</div>'}</div>`}
+
+function letterHTML(inv){const t=inv.tpl,f=inv.from,L=I18N[inv.lang]||I18N.en;
+ const mny=n=>inv.cur==='EUR'?(Number.isInteger(n)?n:n.toFixed(2).replace('.',','))+'€':money(n,inv.cur,inv.lang);
+ const dd=s=>s?s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(2,4):'';
+ return `<div class="inv" dir="${inv.lang==='he'?'rtl':'ltr'}" style="line-height:1.55">${inv.paid?`<div class="stamp">${L.paid}</div>`:''}
+ <div>${E(f.name)}<br>${br(f.address)}${f.phone?'<br>'+E(f.phone):''}${f.email?'<br>'+E(f.email):''}</div>
+ <div style="margin:38px 0 20px;font-size:20px">${E(t.title||L.invoice)}</div>
+ ${t.intro?`<p>${br(t.intro)}</p>`:''}
+ ${inv.lines.map(l=>`<div style="display:flex;gap:14px;margin:5px 0"><span style="width:72px;flex:none">${dd(l.date)}</span><span style="flex:1">${E(l.text||l.desc)}</span><span style="white-space:nowrap">${mny(l.amount)}</span></div>`).join('')}
+ <div style="margin:26px 0 24px">${inv.vat?`${L.vat} ${inv.vat}%: ${mny(inv.total-inv.sub)}<br>`:''}${E(t.totalLabel||'Total')} ${mny(inv.total)}</div>
+ ${t.payText||f.payment?`<div>${E(t.payText||'')}${t.payText&&f.payment?'<br>':''}${br(f.payment)}</div>`:''}
+ ${t.footer?`<div style="margin-top:14px">${br(t.footer)}</div>`:''}
+ ${t.closing?`<div style="margin-top:22px">${E(t.closing)}<br><br>${E(f.name)}</div>`:''}</div>`}
+function declHTML(inv){const t=inv.tpl,f=inv.from,L=I18N[inv.lang]||I18N.en;
+ const dd=s=>s?s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(2,4):'';
+ const fmt=n=>Number.isInteger(n)?n:n.toFixed(2).replace('.',',');
+ const last=inv.lines.reduce((m,l)=>l.date&&l.date>m?l.date:m,'');
+ const rows=inv.lines.map(l=>[dd(l.date),l.text||l.desc,fmt(l.amount)+' €']);while(rows.length<9)rows.push(['','','']);
+ const notes=(t.declNotes||'').split('\n');
+ return `<div class="inv decl">${inv.paid?`<div class="stamp">${L.paid}</div>`:''}
+ <div class="dh">${E(t.declTitle||'Declaratieformulier')}</div>
+ <table class="d1"><tr><th>Naam</th><td>${E(f.fullName)}</td></tr><tr><th>Woonplaats</th><td>${E(f.city)}</td></tr><tr><th>IBAN</th><td>${E(f.iban)}</td></tr><tr><th>Maand en jaar</th><td>${dd(last)}</td></tr></table>
+ <table class="d2"><tr><th style="width:17%">Datum</th><th>Omschrijving</th><th style="width:17%">Bedrag</th></tr>
+ ${rows.map(r=>`<tr><td><b>${E(r[0])}</b></td><td><b>${E(r[1])}</b></td><td><b>${E(r[2])}</b></td></tr>`).join('')}
+ <tr><th>Total</th><td></td><th>${fmt(inv.total)}€</th></tr></table>
+ <table class="d3"><tr><th>Naam en handtekening declarant</th><th>Naam en handtekening eindverantwoordelijke</th></tr><tr><td style="height:70px;vertical-align:bottom"><b>${E(f.fullName)}</b></td><td></td></tr></table>
+ <div class="dn">${notes.map((n,i)=>i===0&&/^N\.B\.?:?$/.test(n.trim())?`<b>${E(n)}</b>`:E(n)).join('<br>')}</div></div>`}
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],DAYN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function hebHoliday(s){try{const d=pd(s);d.setHours(12);const parts=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'long'}).formatToParts(d);
+ const dy=+parts.find(p=>p.type==='day').value,k=parts.find(p=>p.type==='month').value.toLowerCase().slice(0,4);
+ const H={tish:{1:'Rosh Hashanah',2:'Rosh Hashanah',9:'Erev Yom Kippur',10:'Yom Kippur',15:'Sukkot',16:'Sukkot',22:'Shemini Atzeret',23:'Simchat Torah'},nisa:{15:'Pesach',16:'Pesach',21:'Pesach',22:'Pesach'},siva:{6:'Shavuot',7:'Shavuot'}};
+ return (H[k]&&H[k][dy])||''}catch(e){return''}}
+function attHTML(inv){const t=inv.tpl,L=I18N[inv.lang]||I18N.en,per={};
+ inv.lines.forEach(l=>{if(!l.date)return;const o=per[l.date]||(per[l.date]={n:0,note:[]});o.n+=(+l.students||0);if(l.note)o.note.push(l.note)});
+ const months=[...new Set(Object.keys(per).map(s=>s.slice(0,7)))].sort();let out='';
+ months.forEach(mk=>{const [y,mo]=mk.split('-').map(Number),last=new Date(y,mo,0).getDate();let days=0,studs=0,rows='';
+  for(let d=1;d<=last;d++){const s=mk+'-'+pad(d),dt=pd(s),o=per[s],yes=!!o;if(yes){days++;studs+=o.n}
+   const note=yes?o.note.join('; '):((inv.off&&inv.off[s])||(dt.getDay()===6?'Shabbat':hebHoliday(s)));
+   rows+=`<tr class="${yes?'':'no'}"><td class="l">${DAYN[dt.getDay()]}</td><td>${d}-${MON[mo-1]}-${y}</td><td class="gap"></td><td>${yes?'yes':'no'}</td><td>${yes?o.n:0}</td><td class="l">${E(note)}</td></tr>`}
+  out+=`<h3>${new Date(y,mo-1,1).toLocaleDateString('en',{month:'long',year:'numeric'})}</h3><table class="att"><thead><tr><th>Day</th><th>Date</th><th class="gap"></th><th>${E(t.attTeacher||'Teacher')}</th><th># Students</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>
+  <table class="atot"><tr><th>Total Days Taught</th><td>${days}</td></tr><tr><th>Total Students</th><td>${studs}</td></tr>${t.showAmount&&+t.monthlyFee>0?`<tr><th>Monthly amount</th><td>${money(+t.monthlyFee,inv.cur,inv.lang)}</td></tr>`:''}</table>`});
+ return `<div class="inv attw">${inv.paid?`<div class="stamp">${L.paid}</div>`:''}${out}${t.showAmount&&!(+t.monthlyFee>0)?`<table class="atot"><tr><th>Amount</th><td>${money(inv.total,inv.cur,inv.lang)}</td></tr></table>`:''}</div>`}
+function invHTML(inv){if(inv.tpl.layout==='attendance')return attHTML(inv);if(inv.tpl.layout==='declaratie')return declHTML(inv);if(inv.tpl.layout==='letter')return letterHTML(inv);const L=I18N[inv.lang]||I18N.en,m=n=>money(n,inv.cur,inv.lang),rtl=inv.lang==='he';
+ return `<div class="inv" dir="${rtl?'rtl':'ltr'}">${inv.paid?`<div class="stamp">${L.paid}</div>`:''}
+ <div class="top"><div><h1>${E(inv.tpl.title||L.invoice)}</h1><div>${L.no} ${E(inv.number)}</div><div>${L.date}: ${fdate(inv.date,inv.lang)}</div></div>
+ <div style="text-align:${rtl?'left':'right'}"><b>${E(inv.from.name)}</b><br>${br(inv.from.address)}${inv.from.email?'<br>'+E(inv.from.email):''}${inv.from.phone?'<br>'+E(inv.from.phone):''}</div></div>
+ <div style="margin-top:18px"><span style="font-size:12px;color:#666;text-transform:uppercase">${L.billTo}</span><br><b>${E(inv.to.name||'')}</b><br>${br(inv.to.address||'')}</div>
+ ${inv.tpl.intro?`<p style="margin-top:16px">${br(inv.tpl.intro)}</p>`:''}
+ <table><thead><tr><th>${L.desc}</th><th class="num">${L.qty}</th><th class="num">${L.rate}</th><th class="num">${L.amount}</th></tr></thead><tbody>
+ ${inv.lines.map(l=>`<tr><td>${E(l.desc)}</td><td class="num">${l.qty}</td><td class="num">${m(l.rate)}</td><td class="num">${m(l.amount)}</td></tr>`).join('')}</tbody></table>
+ <div class="tot">${inv.vat?`<div><span>${L.sub}</span><span>${m(inv.sub)}</span></div><div><span>${L.vat} ${inv.vat}%</span><span>${m(inv.total-inv.sub)}</span></div>`:''}<div class="grand"><span>${L.total}</span><span>${m(inv.total)}</span></div></div>
+ ${inv.from.payment?`<div class="foot"><b>${L.pay}</b>\n${E(inv.from.payment)}</div>`:''}
+ ${inv.tpl.footer?`<div class="foot">${E(inv.tpl.footer)}</div>`:''}</div>`}
+
+function vCli(){const q=(ui.cq||'').toLowerCase(),cur=S.settings.currency;
+ const list=[...S.clients].filter(c=>!q||(c.name+' '+(c.notes||'')+' '+(c.kind||'')).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
+ return `<div class="row"><h2 class="sp">Clients &amp; students (${S.clients.length})</h2><button class="b" data-a="clbulk">Add many</button><button class="b p" data-a="clnew">+ Add</button></div>
+ <input data-ch="cs" placeholder="Search by name or note" value="${E(ui.cq||'')}" style="margin:8px 0">`+
+ (list.length?list.map(c=>{const L=ledger(c),lp=lastPay(c),ev=sessionsSince(c),ch=sessionsSince(c).filter(e=>e.status==='cancelled').length,n=ev.reduce((s,e)=>s+qtyOf(e),0),owed=ev.reduce((s,e)=>s+amountOf(e),0),hasS=S.events.some(e=>e.client===c.id&&jtOf(e.jt).mode==='session');
+  const rates=Object.entries(c.rates||{}).filter(([k,v])=>v!==''&&v!=null).map(([k,v])=>{const j=jtOf(k),t=(j.tiers||[]).find(t=>t.rate===+v);return `${E(j.name)}: ${money(v,cur,'en')}${t?' ('+E(t.name)+')':''}`}).join(' · ');
+  return `<div class="card"><div class="row"><b class="sp">${E(c.name)}</b><span class="tag">${E(c.kind||'')}</span></div>
+  ${rates?`<div class="small">${rates}</div>`:''}${availLine(c)}${c.notes?`<div class="small mute">${E(c.notes)}</div>`:''}
+  ${hasS?`<div style="margin-top:6px"><b>${n}</b> lesson${n===1?'':'s'} since ${lp?'last payment ('+fdate(lp)+')':'the start (no payment recorded)'}${n?' · <b>'+money(owed,cur,'en')+'</b>':''}${ch?' · incl. '+ch+' charged cancellation'+(ch===1?'':'s'):''}</div>`:''}
+  ${L.has?`<div style="margin-top:4px">Balance: ${L.bal>0.004?`<span class="tag bad">owes ${money(L.bal,cur,'en')}</span>`:L.bal<-0.004?`<span class="tag ok">paid ahead ${money(-L.bal,cur,'en')}</span>`:'<span class="tag ok">settled</span>'}</div>`:''}
+  <div class="row" style="margin-top:8px"><button class="b s" data-a="clpay" data-v="${c.id}">Record payment</button>${L.has?`<button class="b s" data-a="stmt" data-v="${c.id}">Statement</button>`:''}<button class="b s" data-a="cledit" data-v="${c.id}">Edit</button></div></div>`}).join(''):'<div class="card mute">No clients match.</div>')}
+function bulkAdd(text,def){const jt=S.jobTypes.find(j=>j.mode==='session'),have=new Set(S.clients.map(c=>c.name.trim().toLowerCase()));let n=0;
+ String(text||'').split('\n').forEach(l=>{l=l.trim();if(!l)return;const m=l.match(/^(.*?)[,;\t]\s*(\d+(?:[.,]\d+)?)\s*€?$/);const name=(m?m[1]:l).trim();if(!name||have.has(name.toLowerCase()))return;
+  const price=m?+m[2].replace(',','.'):(def!==''&&def!=null?+def:null);have.add(name.toLowerCase());
+  S.clients.push({id:uid(),name,kind:'Student',email:'',phone:'',address:'',notes:'',rates:(price!==null&&jt)?{[jt.id]:price}:{},payments:[],layout:'',declTitle:'',declNotes:''});n++});
+ save();return n}
+function vJobs(){
+ return `<div class="row"><h2 class="sp">Job types</h2><button class="b p" data-a="jtnew">+ Add job type</button></div>`+
+ S.jobTypes.map(j=>`<div class="card"><div class="row"><span class="bar" style="background:${j.color};height:28px"></span><b class="sp">${E(j.name)}</b><button class="b s" data-a="jtedit" data-v="${j.id}">Edit</button></div>
+ <div class="small mute">${MODES[j.mode]} · rate ${money(j.rate,S.settings.currency,'en')}${j.mode==='daystudent'?' + '+money(j.rate2,S.settings.currency,'en')+'/student':''}${j.lang?' · invoices in '+LANGS[j.lang]:''}${j.cur?' · '+j.cur:''}</div></div>`).join('')}
+
+function vSet(){const s=S.settings;
+ return `<div class="card"><h2>Your details (shown on invoices)</h2><form id="setf">
+ <label>Name</label><input name="name" value="${E(s.name)}"><label>Address</label><textarea name="address">${E(s.address)}</textarea>
+ <div class="g2"><div><label>Email</label><input name="email" value="${E(s.email)}"></div><div><label>Phone</label><input name="phone" value="${E(s.phone)}"></div></div>
+ <label>Payment details (IBAN, etc.)</label><textarea name="payment">${E(s.payment)}</textarea>
+ <div class="g2"><div><label>Full name (declaration forms)</label><input name="fullName" value="${E(s.fullName)}"></div><div><label>City (declaration forms)</label><input name="city" value="${E(s.city)}"></div></div>
+ <label>IBAN as printed on declaration forms</label><input name="iban" value="${E(s.iban)}">
+ <div class="g2"><div><label>Default currency</label><select name="currency">${opts(CURS.map(c=>[c,c]),s.currency)}</select></div><div><label>Default invoice language</label><select name="lang">${opts(Object.entries(LANGS),s.lang)}</select></div>
+ <div><label>Invoice number prefix</label><input name="prefix" value="${E(s.prefix)}"></div><div><label>Next invoice number</label><input type="number" name="next" value="${s.next}"></div>
+ <div><label>VAT % (0 = none shown)</label><input type="number" step="any" name="vat" value="${s.vat}"></div></div>
+ <div class="row" style="margin-top:10px"><button class="b p" type="submit">Save</button></div></form></div>
+ <div class="card"><h2>My availability</h2><p class="small mute">Teaching hours are when you normally teach. Mornings are only offered when you ask for them (Kollel time). Yom Tov is always off. On Fridays (and before Yom Tov) teaching stops at candle lighting; after Shabbat (and Yom Tov) it starts at nightfall, so Motzei Shabbos follows the season automatically. Change anything at any time: the Calendar shows what no longer fits.</p><form id="availf">
+ ${[0,1,2,3,4,5,6].map(w=>{const H=hoursOf(w);return `<div style="margin:8px 0"><div class="row"><label style="display:flex;gap:6px;align-items:center;margin:0;width:78px;color:var(--ink)"><input type="checkbox" name="on${w}" style="width:auto"${H.on?' checked':''}>${DOW[w]}</label><input type="time" name="hf${w}" value="${H.from}" style="width:120px"><span>–</span><input type="time" name="ht${w}" value="${H.to}" style="width:120px"></div><div class="row" style="margin-top:3px"><span class="small mute" style="width:78px">Morning</span><input type="time" name="mf${w}" value="${H.from2||''}" style="width:120px"><span>–</span><input type="time" name="mt${w}" value="${H.to2||''}" style="width:120px"></div></div>`}).join('')}
+ <div class="g2"><div><label>Stop before sunset (candle lighting, min)</label><input type="number" name="candles" value="${candMin()}"></div><div><label>Start after sunset (nightfall, min)</label><input type="number" name="tzeit" value="${tzeitMin()}"></div></div>
+ <div class="g2"><div><label>Gap needed between jobs (minutes)</label><input type="number" name="buffer" value="${bufMin()}"></div><div><label>Offer start times every</label><select name="step">${opts([['15','15 minutes'],['30','30 minutes'],['60','1 hour']],String(stepMin()))}</select></div></div>
+ <label>Regular blocked times: davening, shiur, Kollel, anything that repeats</label>
+ ${Array.from({length:Math.min(8,blocksOf().length+2)},(_,i)=>{const b=blocksOf()[i]||{days:[],mode:'fixed'};return `<div style="border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0"><input name="bk${i}l" placeholder="Label (e.g. Mincha–Maariv &amp; shiur)" value="${E(b.label||'')}">
+ <div class="g2"><div><label>Times</label><select name="bk${i}m">${opts([['fixed','Fixed clock times'],['sunset','Relative to sunset (follows the season)']],b.mode==='sunset'?'sunset':'fixed')}</select></div><div><label>Gap around it (minutes)</label><input type="number" name="bk${i}g" value="${b.gap==null?'':b.gap}" placeholder="0"></div></div>
+ <div class="row" style="margin-top:4px"><span class="small" style="width:60px">Fixed</span><input type="time" name="bk${i}f" value="${b.from||''}" style="width:120px"><span>–</span><input type="time" name="bk${i}t" value="${b.to||''}" style="width:120px"></div>
+ <div class="row" style="margin-top:4px"><span class="small" style="width:60px">Sunset</span><input type="number" name="bk${i}o" value="${b.mode==='sunset'?(b.off==null?'':b.off):''}" placeholder="min after (− = before)" style="width:150px"><input type="number" name="bk${i}n" value="${b.mode==='sunset'?(b.len||''):''}" placeholder="lasts (min)" style="width:110px"></div>
+ <div class="row" style="margin-top:4px">${DOW.map((n,w)=>`<label style="display:flex;gap:2px;align-items:center;margin:0;font-size:12px;color:var(--ink)"><input type="checkbox" name="bk${i}d${w}" style="width:auto"${(b.days||[]).includes(w)?' checked':''}>${n}</label>`).join('')}</div>
+ <div class="row" style="margin-top:4px"><span class="small">only from</span><input type="date" name="bk${i}s" value="${b.start||''}" style="width:150px"><span class="small">until</span><input type="date" name="bk${i}e" value="${b.end||''}" style="width:150px"></div>
+ ${(b.label||b.from||b.len)?`<div class="small mute" style="margin-top:4px">${E(blockPreview(b))}</div>`:''}</div>`}).join('')}
+ <div class="small mute">To change a time from a certain date, give the old block an "until" date and add a new block with a "from" date. Remove a block by clearing its times.</div>
+ <div class="row" style="margin-top:10px"><button class="b p" type="submit">Save availability</button></div></form>${excSettingsList()}</div>
+ <div class="card"><h2>Backup</h2><p class="small mute">Your data is stored only in this browser on this device. Export a backup regularly, and use it to move to another device.</p>
+ <div class="row"><button class="b" data-a="export">Export backup</button><label class="b" style="margin:0;color:var(--ink)">Import backup<input type="file" accept=".json" id="imp" style="display:none"></label></div></div>`}
+
+/* ---------- actions ---------- */
+function parseTiers(s){return String(s||'').split('\n').map(l=>{const m=l.trim().match(/^(.*?)[:=\s]\s*(\d+(?:[.,]\d+)?)\s*€?$/);return m&&m[1].trim()?{name:m[1].trim(),rate:+m[2].replace(',','.')}:null}).filter(Boolean)}
+function jtForm(id){const j=id?jtOf(id):{name:'',color:COLORS[S.jobTypes.length%COLORS.length],mode:'flat',rate:0,rate2:0,lang:'',cur:'',presets:'',tpl:{title:'',intro:'',footer:'',layout:'itemized'}};
+ modal(`<h2>${id?'Edit':'New'} job type</h2><form id="jtf" data-id="${id||''}">
+ <label>Name</label><input name="name" value="${E(j.name)}" required>
+ <div class="g2"><div><label>How you charge</label><select name="mode">${opts(Object.entries(MODES),j.mode)}</select></div><div><label>Colour</label><input type="color" name="color" value="${j.color}" style="height:38px;padding:2px"></div>
+ <div><label>Standard rate (per job / hour / lesson / day)</label><input type="number" step="any" name="rate" value="${j.rate}"></div><div><label>Per student (only for "per day + per student")</label><input type="number" step="any" name="rate2" value="${j.rate2||0}"></div>
+ <div><label>Invoice language</label><select name="lang">${opts([['','Default'],...Object.entries(LANGS)],j.lang||'')}</select></div><div><label>Currency</label><select name="cur">${opts([['','Default'],...CURS.map(c=>[c,c])],j.cur||'')}</select></div></div>
+ <label>Quick titles when adding entries (comma separated)</label><input name="presets" value="${E(j.presets)}">
+ <label>Price tiers, one per line (e.g. "Old price: 45")</label><textarea name="tiers">${(j.tiers||[]).map(t=>t.name+': '+t.rate).join('\n')}</textarea>
+ <label>Length of one session in minutes (fills the end time automatically)</label><input type="number" name="dur" value="${j.duration||''}">
+ <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="track" style="width:auto"${j.trackOnly?' checked':''}>Records only: I don't send invoices for this, I just track lessons and payments</label>
+ <h2 style="margin-top:14px">Invoice template</h2>
+ <label>Title (empty = "Invoice" / "Factuur" / "חשבונית" by language)</label><input name="ttitle" value="${E(j.tpl.title)}"><label>Intro text</label><textarea name="tintro">${E(j.tpl.intro)}</textarea>
+ <label>Footer text</label><textarea name="tfoot">${E(j.tpl.footer)}</textarea>
+ <label>Layout</label><select name="tlay">${opts([['attendance','Monthly attendance sheet (Lekstraat style)'],['letter','Letter (JBW style): sender, dated lines, total, payment sentence'],['itemized','Itemized table'],['summary','Summary: one total line']],j.tpl.layout||'itemized')}</select>
+ <label>Letter layout: total label</label><input name="ttotal" value="${E(j.tpl.totalLabel)}">
+ <label>Letter layout: sentence before the account number</label><input name="tpay" value="${E(j.tpl.payText)}">
+ <label>Letter layout: sign-off</label><input name="tclose" value="${E(j.tpl.closing)}">
+ <label>Attendance sheet: name above the yes/no column</label><input name="tatt" value="${E(j.tpl.attTeacher)}">
+ <label>Attendance sheet: fixed amount paid per month (leave empty if none)</label><input type="number" step="any" name="tfee" value="${j.tpl.monthlyFee??''}">
+ <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="tamt" style="width:auto"${j.tpl.showAmount?' checked':''}>Attendance sheet: print the monthly amount on the report</label>
+ <div class="row" style="margin-top:12px"><button class="b p" type="submit">Save</button><button class="b" type="button" data-a="close">Cancel</button><span class="sp"></span>${id?'<button class="b d" type="button" data-a="jtdel" data-v="'+id+'">Delete</button>':''}</div></form>`)}
+function clForm(id){const c=id?clOf(id):{name:'',kind:'Student',email:'',phone:'',address:'',notes:'',rates:{}};
+ modal(`<h2>${id?'Edit':'New'} client</h2><form id="clf" data-id="${id||''}">
+ <div class="g2"><div><label>Name</label><input name="name" value="${E(c.name)}" required></div><div><label>Type</label><input name="kind" list="kinds" value="${E(c.kind)}"><datalist id="kinds"><option>Student<option>Organization<option>Family<option>Synagogue<option>Other</datalist></div>
+ <div><label>Email</label><input name="email" value="${E(c.email)}"></div><div><label>Phone</label><input name="phone" value="${E(c.phone)}"></div></div>
+ <label>Address (for invoices)</label><textarea name="address">${E(c.address)}</textarea>
+ <label>Opening balance before using this app (+ they owe me, − paid ahead)</label><input type="number" step="any" name="openBal" value="${c.openBal||''}">
+ <label>Notes (e.g. "old price", special deal)</label><textarea name="notes">${E(c.notes)}</textarea>
+ <label>Invoice layout for this client</label><select name="layout">${opts([['','Use the job type\'s layout'],['letter','Letter (JBW style)'],['declaratie','Declaration form (Declaratieformulier)'],['itemized','Itemized table'],['summary','Summary: one total line']],c.layout||'')}</select>
+ <label>Declaration form: title at the top</label><input name="declTitle" value="${E(c.declTitle)}">
+ <label>Declaration form: notes at the bottom</label><textarea name="declNotes" style="min-height:110px">${E(c.declNotes)}</textarea>
+ <label>When this student can have lessons (fill only the days they can do; empty days count as unavailable. Leave all empty if any day works)</label>
+ ${[0,1,2,3,4,5,6].map(w=>`<div class="row" style="margin:3px 0"><span class="small" style="width:40px">${DOW[w]}</span><input type="time" name="avf${w}" value="${(c.avail&&c.avail[w]&&c.avail[w].from)||''}" style="width:120px"><span>–</span><input type="time" name="avt${w}" value="${(c.avail&&c.avail[w]&&c.avail[w].to)||''}" style="width:120px"></div>`).join('')}
+ <label>Special rates for this client (empty = standard rate)</label>
+ ${S.jobTypes.map(j=>`<div class="row" style="margin:3px 0"><span class="sp small">${E(j.name)}</span>${(j.tiers&&j.tiers.length)?`<select data-ch="cltier" data-jt="${j.id}" style="width:150px"><option value="">Pick a price…</option>${j.tiers.map(t=>`<option value="${t.rate}"${(c.rates&&+c.rates[j.id]===t.rate)?' selected':''}>${E(t.name)} (${t.rate})</option>`).join('')}</select>`:''}<input type="number" step="any" style="width:130px" name="r_${j.id}" placeholder="${j.rate}" value="${(c.rates&&c.rates[j.id]!==undefined)?c.rates[j.id]:''}"></div>`).join('')}
+ <div class="row" style="margin-top:12px"><button class="b p" type="submit">Save</button><button class="b" type="button" data-a="close">Cancel</button><span class="sp"></span>${id?'<button class="b d" type="button" data-a="cldel" data-v="'+id+'">Delete</button>':''}</div></form>`)}
+
+const A={
+ tab(v){ui.tab=v;render()},
+ sel(v){ui.sel=v;const d=pd(v);if(d.getMonth()!==ui.month.getMonth())ui.month=new Date(d.getFullYear(),d.getMonth(),1);render()},
+ mon(v){v=+v;ui.month=v===0?new Date(new Date().getFullYear(),new Date().getMonth(),1):new Date(ui.month.getFullYear(),ui.month.getMonth()+v,1);if(v===0)ui.sel=today();render()},
+ close(){closeModal()},
+ evnew(){evForm(null,ui.sel)},evedit(v){evForm(v)},
+ evdel(v){if(!confirm('Delete this entry?'))return;S.events=S.events.filter(e=>e.id!==v);save();closeModal();render()},
+ jtnew(){jtForm()},jtedit(v){jtForm(v)},
+ jtdel(v){if(S.events.some(e=>e.jt===v)||S.invoices.some(i=>i.jt===v))return alert('This job type has entries or invoices, so it cannot be deleted.');if(!confirm('Delete this job type?'))return;S.jobTypes=S.jobTypes.filter(j=>j.id!==v);save();closeModal();render()},
+ clnew(){clForm()},cledit(v){clForm(v)},
+ cldel(v){if(S.events.some(e=>e.client===v))return alert('This client has entries, so it cannot be deleted.');if(!confirm('Delete this client?'))return;S.clients=S.clients.filter(c=>c.id!==v);save();closeModal();render()},
+ stmt(v){const ds=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(2,4),c=clOf(v),L=ledger(c),cur=S.settings.currency,M=n=>money(n,cur,'en');
+  modal(`<div class="row noprint" style="margin-bottom:10px"><button class="b p" data-a="print">Print / save as PDF</button><span class="sp"></span><button class="b" data-a="close">Close</button></div>
+  <div class="inv"><h1 style="font-size:22px">Statement: ${E(c.name)}</h1><div class="small" style="color:#555">Up to ${fdate(today())}</div>
+  <table><thead><tr><th>Date</th><th>Description</th><th class="num">Charged</th><th class="num">Paid</th><th class="num">Balance</th></tr></thead><tbody>
+  ${L.open?`<tr><td></td><td>Opening balance</td><td class="num">${L.open>0?M(L.open):''}</td><td class="num">${L.open<0?M(-L.open):''}</td><td class="num">${M(L.open)}</td></tr>`:''}
+  ${L.rows.map(r=>{if(r.e){const e=r.e,cx=e.status==='cancelled',desc=(e.title||jtOf(e.jt).name)+(cx?' — cancelled by '+(e.cancelBy==='me'?'teacher':e.cancelBy==='them'?'student':'?')+(e.cancelReason?' ('+e.cancelReason+')':'')+(e.charge?', charged':', not charged'):'');
+   return `<tr${cx&&!e.charge?' style="color:#888"':''}><td style="white-space:nowrap">${ds(e.date)}</td><td>${E(desc)}</td><td class="num">${r.amt?M(r.amt):'—'}</td><td class="num"></td><td class="num">${M(r.bal)}</td></tr>`}
+   return `<tr style="background:#f1f8f3"><td style="white-space:nowrap">${ds(r.p.date)}</td><td>Payment received</td><td class="num"></td><td class="num">${M(r.amt)}</td><td class="num">${M(r.bal)}</td></tr>`}).join('')}
+  </tbody></table>
+  <div class="tot"><div><span>Lessons held</span><span>${L.held}</span></div><div><span>Total charged</span><span>${M(L.charged+Math.max(L.open,0))}</span></div><div><span>Total paid</span><span>${M(L.paid+Math.max(-L.open,0))}</span></div><div class="grand"><span>${L.bal>0.004?'Balance owed':L.bal<-0.004?'Paid ahead':'Balance'}</span><span>${M(Math.abs(L.bal))}</span></div></div></div>`)},
+ clpay(v){const c=clOf(v),d=prompt('Payment date (YYYY-MM-DD)',today());if(!d||!/^\d{4}-\d{2}-\d{2}$/.test(d))return;const a=prompt('Amount received','');const n=parseFloat(String(a).replace(',','.'));if(!(n>0))return alert('Please enter the amount received, so the balance is correct.');c.payments=c.payments||[];c.payments.push({date:d,amount:n});save();render()},
+ mkinv(){const ids=[...document.querySelectorAll('.ic:checked')].map(x=>x.value);const xd=document.getElementById('xd').value.trim(),xa=+document.getElementById('xa').value;
+  if(!ids.length&&!(xd&&xa))return alert('Select at least one entry.');
+  const evs=S.events.filter(e=>ids.includes(e.id)).sort(byDT),jt=jtOf(evs[0]?evs[0].jt:ui.inv.jt),lang=document.getElementById('ilang').value,cur=document.getElementById('icur').value;
+  let lines=evs.map(e=>{const m=jtOf(e.jt).mode,q=qtyOf(e),a=amountOf(e),unit=(m==='hourly'||m==='session')&&e.status!=='cancelled',lc=e.status==='cancelled'?(lang==='he'?' (ביטול מאוחר)':lang==='nl'?' (late annulering)':' (late cancellation)'):'';let d=fdate(e.date,lang)+' — '+(e.title||jt.name)+lc;
+   if(m==='daystudent')d+=` (${q} ${lang==='he'?'תלמידים':lang==='nl'?'leerlingen':'students'})`;
+   return{desc:d,date:e.date,text:(e.title||jt.name)+lc,qty:unit?q:1,rate:unit?rateOf(e):a,amount:a,ev:e.id,students:(m==='daystudent'?q:undefined),note:e.notes||''}});
+  if(layoutOf(jt,clOf(evs[0]?evs[0].client:ui.inv.cl))==='summary'&&lines.length){const t=lines.reduce((n,l)=>n+l.amount,0);lines=[{desc:jt.name+' — '+fdate(evs[0].date,lang)+(evs.length>1?' – '+fdate(evs[evs.length-1].date,lang):'')+` (${evs.length})`,qty:1,rate:t,amount:t}]}
+  if(xd&&xa)lines.push({desc:xd,qty:1,rate:xa,amount:xa});
+  const fixed=layoutOf(jt,clOf(evs[0]?evs[0].client:ui.inv.cl))==='attendance'&&+jt.tpl.monthlyFee>0;
+  const sub=fixed?Math.round(+jt.tpl.monthlyFee*new Set(evs.map(e=>e.date.slice(0,7))).size*100)/100:lines.reduce((n,l)=>n+l.amount,0),vat=fixed?0:(+S.settings.vat||0),total=Math.round(sub*(1+vat/100)*100)/100;
+  const cid=evs[0]?evs[0].client:ui.inv.cl,c=clOf(cid)||{};
+  const off={};if(layoutOf(jt,c)==='attendance'){const ms=new Set(evs.map(e=>e.date.slice(0,7)));S.events.filter(e=>e.jt===jt.id&&(e.client||'')===(cid||'')&&e.status==='cancelled'&&ms.has(e.date.slice(0,7))).forEach(e=>{off[e.date]=(e.notes||e.cancelReason||e.title||'').trim()||'Not taught'})}
+  const isRep=layoutOf(jt,c)==='attendance',firstM=evs.length?evs[0].date:today();
+  const inv={off,id:uid(),number:isRep?jt.name+' – '+pd(firstM).toLocaleDateString('en',{month:'long',year:'numeric'}):S.settings.prefix+String(S.settings.next).padStart(4,'0'),date:today(),jt:jt.id,client:cid||'',lang,cur,lines,sub,vat,total,paid:false,
+   from:{name:S.settings.name,address:S.settings.address,email:S.settings.email,phone:S.settings.phone,payment:S.settings.payment,fullName:S.settings.fullName||S.settings.name,city:S.settings.city||'',iban:S.settings.iban||''},
+   to:{name:c.name||'',address:c.address||''},tpl:{...jt.tpl,layout:layoutOf(jt,c),declTitle:c.declTitle||'',declNotes:c.declNotes||''}};
+  if(!isRep)S.settings.next++;S.invoices.push(inv);evs.forEach(e=>e.inv=inv.id);save();render();A.invopen(inv.id)},
+ invopen(v){const i=S.invoices.find(x=>x.id===v);modal(`<div class="row noprint" style="margin-bottom:10px"><button class="b p" data-a="print">Print / save as PDF</button><button class="b" data-a="invpay" data-v="${v}">${i.paid?'Mark unpaid':'Mark paid'}</button><span class="sp"></span><button class="b d" data-a="invdel" data-v="${v}">Delete</button><button class="b" data-a="close">Close</button></div>${invHTML(i)}`)},
+ print(){window.print()},
+ invpay(v){const i=S.invoices.find(x=>x.id===v),c=clOf(i.client);
+  if(i.paid){i.paid=false;if(c)c.payments=(c.payments||[]).filter(p=>p.inv!==i.id)}
+  else{const d=prompt('Payment date (YYYY-MM-DD)',today());if(!d||!/^\d{4}-\d{2}-\d{2}$/.test(d))return;i.paid=true;i.paidDate=d;if(c){c.payments=c.payments||[];c.payments.push({date:d,amount:i.total,inv:i.id})}}
+  save();render();A.invopen(v)},
+ invdel(v){if(!confirm('Delete this invoice? Its entries become available to invoice again.'))return;S.events.forEach(e=>{if(e.inv===v)delete e.inv});S.clients.forEach(c=>c.payments=(c.payments||[]).filter(p=>p.inv!==v));S.invoices=S.invoices.filter(i=>i.id!==v);save();closeModal();render()},
+ csv(){const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[['Date','Start','End','Job type','Client','Location','Title','Notes','Amount','Status','Cancelled by','Cancel reason','Charged','Invoice','Record only']].concat(logRows().map(e=>{const inv=S.invoices.find(i=>i.id===e.inv);return[e.date,e.start,e.end,jtOf(e.jt).name,e.client?clName(e.client):'',e.place||'',e.title,e.notes,amountOf(e),e.status,e.status==='cancelled'?(e.cancelBy==='me'?'me':e.cancelBy==='them'?'them':''):'',e.cancelReason||'',e.status==='cancelled'&&e.charge?'yes':'',inv?inv.number:'',e.noinv?'yes':'']}));
+  const b=new Blob(['\ufeff'+rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='work-log-'+today()+'.csv';a.click()},
+ qlog(v){const [jid,n0]=v.split('|');let n=n0;if(n==='?'){n=prompt('Number of students','');if(n===null||n.trim()===''||isNaN(+n))return}
+  const ex=dayEntries(jid).filter(e=>e.status!=='cancelled')[0];S.events=S.events.filter(e=>!(e.date===ui.sel&&e.jt===jid&&e.status==='cancelled'));
+  if(ex){ex.qty=+n;ex.status='active'}else S.events.push({id:uid(),jt:jid,date:ui.sel,start:'',end:'',client:lastClient(jid),title:(jtOf(jid).presets||'').split(',')[0].trim(),notes:'',qty:+n,rate:'',status:'active',place:'',noinv:false});
+  save();render()},
+ qaway(v){const note=prompt('Reason (shown on the report)','Away');if(note===null)return;
+  S.events=S.events.filter(e=>!(e.date===ui.sel&&e.jt===v));
+  S.events.push({id:uid(),jt:v,date:ui.sel,start:'',end:'',client:lastClient(v),title:'',notes:note.trim()||'Away',qty:'',rate:'',status:'cancelled',place:'',noinv:false});save();render()},
+ qclear(v){S.events=S.events.filter(e=>!(e.date===ui.sel&&e.jt===v&&!e.inv));save();render()},
+ clbulk(){const jt=S.jobTypes.find(j=>j.mode==='session'),tiers=(jt&&jt.tiers)||[];
+  modal(`<h2>Add many students</h2><form id="clbf"><label>One student per line. Add a price after a comma if it differs, e.g. "Moshe Cohen, 45"</label>
+  <textarea name="names" style="min-height:200px" placeholder="Moshe Cohen, 45&#10;David Levi, 65&#10;Sarah Katz"></textarea>
+  <label>Price for lines without a price</label><select name="def">${opts([['','Standard rate'],...tiers.map(t=>[String(t.rate),t.name+' ('+t.rate+')'])],'')}</select>
+  <div class="row" style="margin-top:12px"><button class="b p" type="submit">Add</button><button class="b" type="button" data-a="close">Cancel</button></div></form>`)},
+ cancel(v){const e=S.events.find(x=>x.id===v);if(e.inv)return alert('This entry is already on an invoice. Delete that invoice first if it should not be charged.');
+  modal(`<h2>Cancel: ${E(e.title||jtOf(e.jt).name)} · ${fdate(e.date)}</h2><form id="cxf" data-id="${v}">
+  <label>Who cancelled?</label><select name="by" data-ch="cxby">${opts([['me','I cancelled (not charged)'],['them','They cancelled']],'me')}</select>
+  <label>Reason</label><input name="reason" placeholder="e.g. burial, sick, travelling">
+  <div id="cxcharge" style="display:none"><label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="charge" style="width:auto">Charge for this cancelled lesson</label><label>Fee (empty = full price)</label><input type="number" step="any" name="fee"></div>
+  <label>Reschedule to (optional)</label><input type="date" name="resched">
+  <div class="row" style="margin-top:12px"><button class="b p" type="submit">Save cancellation</button><button class="b" type="button" data-a="cxpick">Save and pick a new time…</button><button class="b" type="button" data-a="close">Back</button></div></form>`)},
+ restore(v){const e=S.events.find(x=>x.id===v);e.status='active';e.cancelBy='';e.cancelReason='';e.charge=false;e.cancelFee='';delete e.reschedTo;save();render()},
+ mropen(){openMR({})},
+ mrone(v){const e=S.events.find(x=>x.id===v),en=e.end||mtime(tmin(e.start)+(jtOf(e.jt).duration||60)),sel={};mrAffected(e.date,e.start,en,null).forEach(x=>{sel[x.id]=x.id===v});openMR({date:e.date,from:e.start,to:en,sel,reason:'Schedule conflict'})},
+ mrgo(){const r=ui.mr,aff=mrAffected(r.date,r.from,r.to,r.excl).filter(e=>(r.sel||{})[e.id]!==false);if(!aff.length)return;r.done=aff.map(e=>({id:e.id,msg:''}));aff.forEach(e=>applyCancel(e.id,{by:'me',reason:r.reason||'Schedule change'}));r.step=2;mrRender()},
+ mrbook(v){const [id,dt,t]=v.split('|'),e=S.events.find(x=>x.id===id),r=ui.mr,it=r.done.find(x=>x.id===id),dur=mrItemInfo(it).dur;
+  S.events=S.events.filter(x=>x.reschedFrom!==id);const n={...e,id:uid(),date:dt,start:mtime(+t),end:mtime(+t+dur),status:'active',cancelBy:'',cancelReason:'',charge:false,cancelFee:'',reschedFrom:id};delete n.inv;delete n.reschedTo;
+  e.reschedTo=dt;S.events.push(n);it.msg='';save();render();mrRender()},
+ mrcopy(v){const t=document.getElementById('mrmsg_'+v),txt=t?t.value:'';let ok=false;try{navigator.clipboard.writeText(txt);ok=true}catch(e){}if(!ok){try{t.select();document.execCommand('copy')}catch(e){}}alert('Message copied.')},
+ mrwa(v){const t=document.getElementById('mrmsg_'+v),it=ui.mr.done.find(x=>x.id===v),c=mrItemInfo(it).c,u=waLink(c,t?t.value:'');if(u)window.open(u,'_blank','noopener')},
+ pick(v){const [dt,t]=v.split('|'),f=fdState(),jt=jtOf(f.jt),dur=+f.dur||jt.duration||60;evForm(null,dt,{jt:f.jt,client:f.cl,start:mtime(+t),end:mtime(+t+dur),reschedFrom:f.rf||''})},
+ pickw(v){const [dt,t,n]=v.split('|'),f=fdState(),jt=jtOf(f.jt),dur=+f.dur||jt.duration||60;evForm(null,dt,{jt:f.jt,client:f.cl,start:mtime(+t),end:mtime(+t+dur),rep:'week',cnt:+n,reschedFrom:f.rf||''})},
+ excnew(v){excForm(v)},
+ excdel(v){S.settings.exc=(S.settings.exc||[]).filter(x=>x.id!==v);save();render()},
+ cxpick(){const f=document.getElementById('cxf');if(!f)return;const id=f.dataset.id;applyCancel(id,{by:f.by.value,reason:f.reason.value,charge:f.charge&&f.charge.checked,fee:f.fee&&f.fee.value,resched:''});
+  const e=S.events.find(x=>x.id===id),dur=(e.start&&e.end)?tmin(e.end)-tmin(e.start):'';closeModal();Object.assign(fdState(),{cl:e.client||'',jt:e.jt,dur:dur||'',from:today(),mode:'once',rf:id});ui.tab='find';render()},
+ export(){const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobs-invoices-backup-'+today()+'.json';a.click()}
+};
+document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&A[t.dataset.a]){e.preventDefault();A[t.dataset.a](t.dataset.v)}});
+document.addEventListener('change',e=>{const t=e.target,k=t.dataset&&t.dataset.ch;
+ if(k==='fd'){fdState()[t.name]=t.value;render();return}
+ if(k==='mr'){ui.mr[t.name]=t.value;if(['date','from','to'].includes(t.name))ui.mr.sel={};mrRender();return}
+ if(k==='mrsel'){ui.mr.sel=ui.mr.sel||{};ui.mr.sel[t.dataset.id]=t.checked;mrRender();return}
+ if(k==='mrsoft'){ui.mr.soft=t.checked;mrRender();return}
+ if(k==='mrmsg'){const it=ui.mr.done.find(x=>x.id===t.dataset.id);if(it)it.msg=t.value;return}
+ if(k==='exctype')excUI();
+ if(t.form&&t.form.id==='evf')setTimeout(slotWarn,0);
+ if(k==='evjt')qtyUI();
+ if(k==='cxby')document.getElementById('cxcharge').style.display=t.value==='them'?'':'none';
+ if(k==='evstart'){const f=t.form,jt=jtOf(f.jt.value);if(jt.duration&&f.start.value&&!f.end.value){const [a,b]=f.start.value.split(':').map(Number),tot=a*60+b+jt.duration;f.end.value=pad(Math.floor(tot/60)%24)+':'+pad(tot%60)}}
+ if(k==='cltier'){const inp=t.form['r_'+t.dataset.jt];if(inp&&t.value!=='')inp.value=t.value}
+ if(k==='cs'){ui.cq=t.value;render()}
+ if(k==='evcl'&&t.value==='__new'){const n=prompt('Client name');if(n&&n.trim()){const c={id:uid(),name:n.trim(),kind:'',rates:{},payments:[]};S.clients.push(c);save();t.innerHTML=opts([['','(none)'],...S.clients.map(c=>[c.id,c.name]),['__new','+ New client…']],c.id);qtyUI()}else t.value=''}
+ if(k==='evcl'&&t.value!=='__new')qtyUI();
+ if(k==='lf'){ui.f[t.name]=t.value;render()}
+ if(k==='ijt'){ui.inv.jt=t.value;ui.inv.cl='';render()}
+ if(k==='icl'){ui.inv.cl=t.value;render()}
+ if(t.id==='imp'&&t.files[0]){const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.jobTypes||!d.events)throw 0;if(!confirm('Replace all current data with this backup?'))return;S=Object.assign(defaults(),d);save();render()}catch(x){alert('That file is not a valid backup.')}};r.readAsText(t.files[0])}});
+document.addEventListener('submit',e=>{e.preventDefault();const f=e.target,d=Object.fromEntries(new FormData(f));
+ if(f.id==='evf'){
+  const base={jt:d.jt,date:d.date,start:d.start,end:d.end,client:d.client==='__new'?'':d.client,title:d.title.trim(),notes:d.notes.trim(),qty:d.qty,rate:d.rate,status:d.status,reschedFrom:d.reschedFrom||'',place:(d.place||'').trim(),noinv:!!d.noinv,cancelBy:d.cancelBy||'',cancelReason:(d.cancelReason||'').trim(),charge:!!d.charge&&d.cancelBy==='them',cancelFee:d.cancelFee||''};
+  {const dates=[];if(f.dataset.id)dates.push(d.date);else{const n=d.rep==='none'?1:Math.max(1,Math.min(120,+d.cnt||1));let dy=d.date;while(dates.length<n){if(d.rep==='day'&&pd(dy).getDay()===6){dy=addDays(dy,1);continue}dates.push(dy);dy=addDays(dy,d.rep==='week'?7:1)}}
+   if(base.status==='active'&&base.start){const msgs=[];dates.forEach(dt=>slotIssues(dt,base.start,base.end,base.client,f.dataset.id||null,base.jt).forEach(m=>msgs.push((dates.length>1?fdate(dt)+': ':'')+m)));
+    if(msgs.length&&!confirm(msgs.slice(0,8).join('\n')+(msgs.length>8?'\n…and '+(msgs.length-8)+' more':'')+'\n\nSave anyway?'))return}}
+  const createdIds=f.dataset.id?[f.dataset.id]:[];
+  if(f.dataset.id){Object.assign(S.events.find(x=>x.id===f.dataset.id),base)}
+  else{const n=d.rep==='none'?1:Math.max(1,Math.min(120,+d.cnt||1));let day=d.date,made=0;
+   while(made<n){if(d.rep==='day'&&pd(day).getDay()===6){day=addDays(day,1);continue}{const nid=uid();createdIds.push(nid);S.events.push({id:nid,...base,date:day})}made++;day=addDays(day,d.rep==='week'?7:1)}}
+  if(d.reschedFrom&&!f.dataset.id){const o=S.events.find(x=>x.id===d.reschedFrom);if(o)o.reschedTo=d.date;if(ui.fd)ui.fd.rf=''}
+  ui.sel=d.date;ui.month=new Date(pd(d.date).getFullYear(),pd(d.date).getMonth(),1);save();closeModal();render();
+  const ent=S.events.find(x=>x.id===createdIds[0]);
+  if(ent&&ent.status==='active'&&ent.start&&!['session','hourly'].includes(jtOf(ent.jt).mode)){const en=ent.end||mtime(tmin(ent.start)+(jtOf(ent.jt).duration||60));
+   if(mrAffected(ent.date,ent.start,en,ent.id).length)openMR({date:ent.date,from:ent.start,to:en,excl:ent.id,inc:amountOf(ent),reason:jtOf(ent.jt).name==='Chevra Kadisha'?'Chevra Kadisha call':(ent.title||jtOf(ent.jt).name)})}}
+ if(f.id==='jtf'){const o={name:d.name.trim(),mode:d.mode,color:d.color,rate:+d.rate||0,rate2:+d.rate2||0,lang:d.lang,cur:d.cur,presets:d.presets,tiers:parseTiers(d.tiers),duration:+d.dur||0,trackOnly:!!d.track,tpl:{title:d.ttitle,intro:d.tintro,footer:d.tfoot,layout:d.tlay,totalLabel:d.ttotal,payText:d.tpay,closing:d.tclose,attTeacher:d.tatt,showAmount:!!d.tamt,monthlyFee:d.tfee===''||d.tfee==null?'':+d.tfee}};
+  if(f.dataset.id)Object.assign(jtOf(f.dataset.id),o);else S.jobTypes.push({id:uid(),...o});save();closeModal();render()}
+ if(f.id==='clf'){const rates={};S.jobTypes.forEach(j=>{if(d['r_'+j.id]!==undefined&&d['r_'+j.id]!=='')rates[j.id]=+d['r_'+j.id]});
+  const o={name:d.name.trim(),kind:d.kind,email:d.email,phone:d.phone,address:d.address,notes:d.notes,rates,openBal:+d.openBal||0,avail:parseAvail(d),layout:d.layout,declTitle:d.declTitle,declNotes:d.declNotes};
+  if(f.dataset.id)Object.assign(clOf(f.dataset.id),o);else S.clients.push({id:uid(),payments:[],...o});save();closeModal();render()}
+ if(f.id==='cxf'){applyCancel(f.dataset.id,d);closeModal();render()}
+ if(f.id==='clbf'){const n=bulkAdd(d.names,d.def);closeModal();ui.tab='cli';render();alert(n+' student'+(n===1?'':'s')+' added.')}
+ if(f.id==='excf'){const date=f.dataset.date,to=d.to&&d.to>=date?d.to:date,t=d.type;
+  if((t==='hours'||t==='block')&&!(d.start&&d.end&&d.end>d.start)){alert('Please give a start time and a later end time.');return}
+  S.settings.exc=S.settings.exc||[];S.settings.exc.push({id:uid(),type:t,from:date,to,label:(d.label||'').trim(),start:d.start||'',end:d.end||'',key:d.key||''});save();closeModal();render()}
+ if(f.id==='availf'){const hours={};for(let w=0;w<7;w++)hours[w]={on:!!d['on'+w],from:d['hf'+w]||'18:00',to:d['ht'+w]||'22:30',from2:d['mf'+w]||'',to2:d['mt'+w]||''};
+  const blocks=[];for(let i=0;i<8;i++){const days=[];for(let w=0;w<7;w++)if(d['bk'+i+'d'+w])days.push(w);const mode=d['bk'+i+'m']==='sunset'?'sunset':'fixed';
+   const okk=mode==='sunset'?(+d['bk'+i+'n']>0&&d['bk'+i+'o']!==undefined&&d['bk'+i+'o']!==''):!!(d['bk'+i+'f']&&d['bk'+i+'t']);
+   if(okk&&days.length)blocks.push({label:(d['bk'+i+'l']||'').trim(),mode,from:d['bk'+i+'f']||'',to:d['bk'+i+'t']||'',off:+d['bk'+i+'o']||0,len:+d['bk'+i+'n']||0,gap:+d['bk'+i+'g']||0,days,start:d['bk'+i+'s']||'',end:d['bk'+i+'e']||''})}
+  S.settings.hours=hours;S.settings.blocks=blocks;S.settings.candles=Math.max(0,+d.candles||0);S.settings.tzeit=Math.max(0,+d.tzeit||0);S.settings.buffer=Math.max(0,+d.buffer||0);S.settings.step=+d.step||30;save();alert('Saved.');const pl=problemsList().length;if(pl){ui.tab='cal';alert(pl+' upcoming lesson'+(pl===1?'':'s')+' no longer fit. They are listed at the top of the Calendar.')}render()}
+ if(f.id==='setf'){Object.assign(S.settings,{fullName:d.fullName,city:d.city,iban:d.iban,name:d.name,address:d.address,email:d.email,phone:d.phone,payment:d.payment,currency:d.currency,lang:d.lang,prefix:d.prefix,next:+d.next||1,vat:+d.vat||0});save();alert('Saved.');render()}
+});
+render();
+</script>
+</body>
+</html>
