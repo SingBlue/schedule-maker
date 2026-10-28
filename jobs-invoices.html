@@ -11,7 +11,7 @@
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
 header h1{margin:0;padding:10px 14px 0;font-size:17px}
-nav{display:flex;gap:2px;padding:6px 8px;overflow-x:auto}
+nav{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px}
 nav button{border:0;background:none;color:var(--mute);padding:8px 12px;border-radius:8px;font:inherit;font-weight:600;white-space:nowrap}
 nav button.on{background:var(--acc);color:var(--accink)}
 main{max-width:980px;margin:0 auto;padding:12px}
@@ -318,14 +318,19 @@ function repPrev(){const f=document.getElementById('evf'),el=document.getElement
  const x=repDates(f.date.value,r,f.cnt.value);el.innerHTML='<b>Will add '+x.dates.length+' lesson'+(x.dates.length===1?'':'s')+':</b> '+x.dates.slice(0,12).map(d=>pd(d).toLocaleDateString('en',{weekday:'short',day:'numeric',month:'short'})).join(' · ')+(x.dates.length>12?' …':'')+(x.skipped.length?'<br>Skipped: '+x.skipped.map(s=>shortD(s.d)+' ('+E(s.why)+')').join(', '):'')}
 function lastPay(c){return (c.payments||[]).reduce((m,p)=>{let d=p.date;if(p.ev){const e=S.events.find(x=>x.id===p.ev);if(e)d=e.date}return d>m?d:m},'')}
 /* which lessons are paid: a lesson ticked paid on its own, else lump payments cover the oldest lessons first */
-function payMap(c){const evs=S.events.filter(e=>e.client===c.id&&jtOf(e.jt).trackOnly&&counts(e)&&amountOf(e)>0).sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
- const exp=new Set((c.payments||[]).filter(p=>p.ev).map(p=>p.ev));let pool=(c.payments||[]).filter(p=>!p.ev).reduce((n,p)=>n+(+p.amount||0),0)-Math.max(0,+c.openBal||0);
- const st={},unpaid=[];let owed=0;
- evs.forEach(e=>{if(exp.has(e.id)){st[e.id]='paid';return}const a=amountOf(e);if(pool>=a-0.004){pool-=a;st[e.id]='lump';return}const due=Math.round((a-Math.max(pool,0))*100)/100;pool=0;st[e.id]=due<a?'part':'unpaid';if(e.date<=today()){unpaid.push({e,due});owed+=due}});
- return{st,unpaid,owed:Math.round(owed*100)/100}}
+function payMap(c){const r2=n=>Math.round(n*100)/100,evs=S.events.filter(e=>e.client===c.id&&jtOf(e.jt).trackOnly&&counts(e)&&amountOf(e)>0).sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+ const pays=c.payments||[],byEv={};let pool=-Math.max(0,+c.openBal||0);
+ pays.forEach(p=>{if(p.ev)(byEv[p.ev]=byEv[p.ev]||[]).push(+p.amount||0);else pool+=+p.amount||0});
+ const ids=new Set(evs.map(e=>e.id));Object.keys(byEv).forEach(k=>{if(!ids.has(k))pool+=byEv[k].reduce((a,b)=>a+b,0)});   /* money tied to a lesson that no longer counts becomes credit */
+ const st={},due={},unpaid=[];let owed=0;
+ evs.forEach(e=>{const a=amountOf(e),got=(byEv[e.id]||[]).reduce((x,y)=>x+y,0),own=Math.min(got,a);if(got>a)pool+=got-a;let need=r2(a-own);
+  if(need<=0.004){st[e.id]='paid';due[e.id]=0;return}
+  if(pool>=need-0.004){pool-=need;st[e.id]=got>0?'paid':'lump';due[e.id]=0;return}
+  need=r2(need-Math.max(pool,0));pool=0;st[e.id]=need<a?'part':'unpaid';due[e.id]=need;if(e.date<=today()){unpaid.push({e,due:need});owed+=need}});
+ return{st,due,unpaid,owed:r2(owed)}}
 function payTag(e){if(!e.client||!jtOf(e.jt).trackOnly||!counts(e)||!(amountOf(e)>0))return'';const c=clOf(e.client);if(!c)return'';const s=payMap(c).st[e.id];
- if(s==='paid')return`<button class="tag ok" data-a="evpay" data-v="${e.id}" style="background:none;cursor:pointer">Paid ✓</button>`;if(s==='lump')return'<span class="tag ok">Paid</span>';
- if(e.date>today())return'';return`<button class="tag bad" data-a="evpay" data-v="${e.id}" style="background:none;cursor:pointer">Unpaid · tap when paid</button>`}
+ if(s==='paid')return`<button class="tag ok" data-a="evpay" data-v="${e.id}" style="background:none;cursor:pointer">Paid ✓</button>`;if(s==='lump')return'<span class="tag ok">Paid (from credit)</span>';
+ if(e.date>today())return'';const d=payMap(c).due[e.id];return`<button class="tag bad" data-a="evpay" data-v="${e.id}" style="background:none;cursor:pointer">${s==='part'?'Still owed '+money(d,S.settings.currency,'en')+' · tap':'Unpaid · tap when paid'}</button>`}
 function unpaidModal(id){const c=clOf(id),pm=payMap(c),cur=S.settings.currency;ui.unpaidFor=id;
  modal(`<h2>Unpaid lessons: ${E(c.name)}</h2>${pm.unpaid.length?`<div class="small mute">Past lessons that are not paid yet. Tap Paid when they hand you the money.</div>`+pm.unpaid.map(x=>`<div class="ev"><div class="sp"><b>${fdate(x.e.date)}</b> <span class="small mute">${E(x.e.start||'')}${x.e.end?'–'+E(x.e.end):''}</span></div><div style="text-align:end"><b>${money(x.due,cur,'en')}</b> <button class="b s p" data-a="evpay" data-v="${x.e.id}">Paid</button></div></div>`).join('')+`<div class="row" style="margin-top:10px"><b class="sp">Total ${money(pm.owed,cur,'en')}</b><button class="b p" data-a="paidall" data-v="${id}">Mark all paid</button></div>`:'<div class="card mute">Nothing outstanding.</div>'}
  <div class="row" style="margin-top:10px"><button class="b" data-a="close">Close</button></div>`)}
@@ -344,7 +349,7 @@ function closeModal(){const m=document.getElementById('modal');m.classList.remov
 document.getElementById('modal').addEventListener('mousedown',e=>{if(e.target.id==='modal')closeModal()});
 
 /* ---------- views ---------- */
-const TABS=[['cal','Calendar'],['find','Find a time'],['log','Log'],['inv','Invoices & reports'],['cli','Clients & students'],['jobs','Job types'],['set','Settings']];
+const TABS=[['cal','Calendar'],['find','Find a time'],['log','Log'],['inv','Invoices'],['cli','Students'],['jobs','Job types'],['set','Settings']];
 function render(){
  document.getElementById('nav').innerHTML=TABS.map(([k,l])=>`<button class="${ui.tab===k?'on':''}" data-a="tab" data-v="${k}">${l}</button>`).join('');
  document.getElementById('main').innerHTML=({cal:vCal,find:vFind,log:vLog,inv:vInv,cli:vCli,jobs:vJobs,set:vSet})[ui.tab]();
@@ -601,9 +606,11 @@ const A={
  jtdel(v){if(S.events.some(e=>e.jt===v)||S.invoices.some(i=>i.jt===v))return alert('This job type has entries or invoices, so it cannot be deleted.');if(!confirm('Delete this job type?'))return;S.jobTypes=S.jobTypes.filter(j=>j.id!==v);save();closeModal();render()},
  clnew(){clForm()},cledit(v){clForm(v)},
  repn(v){const f=document.getElementById('evf');if(!f)return;if(f.rep.value==='none')f.rep.value='week';f.cnt.value=v;repPrev()},
- evpay(v){const e=S.events.find(x=>x.id===v);if(!e||!e.client)return;const c=clOf(e.client);c.payments=c.payments||[];const i=c.payments.findIndex(p=>p.ev===v);
-  if(i>=0){if(!confirm('Mark this lesson as unpaid again?'))return;c.payments.splice(i,1)}
-  else{const pm=payMap(c),x=pm.unpaid.find(u=>u.e.id===v),a=x?x.due:amountOf(e);if(!(a>0))return alert('This lesson has no price yet. Set the rate first.');c.payments.push({date:today(),amount:a,ev:v})}
+ evpay(v){const e=S.events.find(x=>x.id===v);if(!e||!e.client)return;const c=clOf(e.client);c.payments=c.payments||[];const pm=payMap(c);
+  if(pm.st[v]==='paid'){if(!confirm('Undo the payment recorded for this lesson?'))return;c.payments=c.payments.filter(p=>p.ev!==v)}
+  else{const due=pm.due[v]>0?pm.due[v]:amountOf(e);if(!(amountOf(e)>0))return alert('This lesson has no price yet. Set the rate first.');
+   const a=prompt('How much did they pay? (lesson price '+money(amountOf(e),S.settings.currency,'en')+(due!==amountOf(e)?', still owed '+money(due,S.settings.currency,'en'):'')+')',String(due).replace('.',','));if(a===null)return;
+   const n=parseFloat(String(a).replace(',','.'));if(!(n>0))return alert('Please type the amount, for example 70.');c.payments.push({date:today(),amount:n,ev:v})}
   save();render();if(document.getElementById('modal').classList.contains('on')&&ui.unpaidFor===e.client)unpaidModal(e.client)},
  unpaid(v){unpaidModal(v)},
  paidall(v){const c=clOf(v),pm=payMap(c);c.payments=c.payments||[];pm.unpaid.forEach(x=>c.payments.push({date:today(),amount:x.due,ev:x.e.id}));save();render();unpaidModal(v)},
