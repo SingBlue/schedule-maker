@@ -308,7 +308,27 @@ function excForm(date){const w=pd(date).getDay(),regs=blocksOf().filter(b=>block
  <div class="row" style="margin-top:12px"><button class="b p" type="submit">Save</button><button class="b" type="button" data-a="close">Cancel</button></div></form>`);excUI()}
 function excUI(){const f=document.getElementById('excf');if(!f||!f.type)return;const t=f.type.value,sh=(id,on)=>{const el=document.getElementById(id);if(el)el.style.display=on?'':'none'};
  sh('exc_label',t!=='unblock');sh('exc_time',t==='hours'||t==='block');sh('exc_key',t==='unblock');const l=document.getElementById('exc_ll');if(l)l.textContent=t==='block'?'Label (e.g. Dentist)':'Reason (optional)'}
-function lastPay(c){return (c.payments||[]).reduce((m,p)=>p.date>m?p.date:m,'')}
+function repDates(date,rep,cnt){const n=rep==='none'||!rep?1:Math.max(1,Math.min(120,+cnt||1)),dates=[],skipped=[];let dy=date;
+ for(let i=0;i<n;i++){if(rep==='day')while(pd(dy).getDay()===6)dy=addDays(dy,1);const off=(rep&&rep!=='none')?offName(dy):'';if(off)skipped.push({d:dy,why:off});else dates.push(dy);dy=addDays(dy,rep==='week'?7:1)}
+ return{dates,skipped}}
+function repPrev(){const f=document.getElementById('evf'),el=document.getElementById('repprev');if(!f||!el||!f.rep)return;const r=f.rep.value,cr=document.getElementById('cntrow');if(cr)cr.style.display=r==='none'?'none':'';
+ const q=document.getElementById('repq');if(q)q.style.display=r==='none'?'none':'';
+ const cl=document.getElementById('cntl');if(cl)cl.textContent=r==='day'?'How many days in total':'How many weeks in total (counting this one)';
+ if(r==='none'){el.textContent='';return}
+ const x=repDates(f.date.value,r,f.cnt.value);el.innerHTML='<b>Will add '+x.dates.length+' lesson'+(x.dates.length===1?'':'s')+':</b> '+x.dates.slice(0,12).map(d=>pd(d).toLocaleDateString('en',{weekday:'short',day:'numeric',month:'short'})).join(' · ')+(x.dates.length>12?' …':'')+(x.skipped.length?'<br>Skipped: '+x.skipped.map(s=>shortD(s.d)+' ('+E(s.why)+')').join(', '):'')}
+function lastPay(c){return (c.payments||[]).reduce((m,p)=>{let d=p.date;if(p.ev){const e=S.events.find(x=>x.id===p.ev);if(e)d=e.date}return d>m?d:m},'')}
+/* which lessons are paid: a lesson ticked paid on its own, else lump payments cover the oldest lessons first */
+function payMap(c){const evs=S.events.filter(e=>e.client===c.id&&jtOf(e.jt).trackOnly&&counts(e)&&amountOf(e)>0).sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+ const exp=new Set((c.payments||[]).filter(p=>p.ev).map(p=>p.ev));let pool=(c.payments||[]).filter(p=>!p.ev).reduce((n,p)=>n+(+p.amount||0),0)-Math.max(0,+c.openBal||0);
+ const st={},unpaid=[];let owed=0;
+ evs.forEach(e=>{if(exp.has(e.id)){st[e.id]='paid';return}const a=amountOf(e);if(pool>=a-0.004){pool-=a;st[e.id]='lump';return}const due=Math.round((a-Math.max(pool,0))*100)/100;pool=0;st[e.id]=due<a?'part':'unpaid';if(e.date<=today()){unpaid.push({e,due});owed+=due}});
+ return{st,unpaid,owed:Math.round(owed*100)/100}}
+function payTag(e){if(!e.client||!jtOf(e.jt).trackOnly||!counts(e)||!(amountOf(e)>0))return'';const c=clOf(e.client);if(!c)return'';const s=payMap(c).st[e.id];
+ if(s==='paid')return`<button class="tag ok" data-a="evpay" data-v="${e.id}" style="background:none;cursor:pointer">Paid ✓</button>`;if(s==='lump')return'<span class="tag ok">Paid</span>';
+ if(e.date>today())return'';return`<button class="tag bad" data-a="evpay" data-v="${e.id}" style="background:none;cursor:pointer">Unpaid · tap when paid</button>`}
+function unpaidModal(id){const c=clOf(id),pm=payMap(c),cur=S.settings.currency;ui.unpaidFor=id;
+ modal(`<h2>Unpaid lessons: ${E(c.name)}</h2>${pm.unpaid.length?`<div class="small mute">Past lessons that are not paid yet. Tap Paid when they hand you the money.</div>`+pm.unpaid.map(x=>`<div class="ev"><div class="sp"><b>${fdate(x.e.date)}</b> <span class="small mute">${E(x.e.start||'')}${x.e.end?'–'+E(x.e.end):''}</span></div><div style="text-align:end"><b>${money(x.due,cur,'en')}</b> <button class="b s p" data-a="evpay" data-v="${x.e.id}">Paid</button></div></div>`).join('')+`<div class="row" style="margin-top:10px"><b class="sp">Total ${money(pm.owed,cur,'en')}</b><button class="b p" data-a="paidall" data-v="${id}">Mark all paid</button></div>`:'<div class="card mute">Nothing outstanding.</div>'}
+ <div class="row" style="margin-top:10px"><button class="b" data-a="close">Close</button></div>`)}
 function ledger(c){const items=[];S.events.filter(e=>e.client===c.id&&jtOf(e.jt).trackOnly&&e.date<=today()).forEach(e=>items.push({d:e.date,t:0,e}));
  (c.payments||[]).forEach(p=>items.push({d:p.date,t:1,p}));items.sort((a,b)=>a.d.localeCompare(b.d)||a.t-b.t);
  const r2=n=>Math.round(n*100)/100;let bal=+c.openBal||0,charged=0,paid=0,held=0;
@@ -363,7 +383,7 @@ function evRow(e){const jt=jtOf(e.jt),cf=conflicts(e);
  <div><b>${E(e.title||jt.name)}</b> <span class="mute small">${E(jt.name)}${e.client?' · '+E(clName(e.client)):''}</span></div>
  <div class="small mute">${E(e.start||'')}${e.end?'–'+E(e.end):''}${jt.mode==='daystudent'?` · ${qtyOf(e)} students`:''}${jt.mode==='session'&&qtyOf(e)!==1?` · ${qtyOf(e)} lessons`:''}${jt.mode==='hourly'?` · ${qtyOf(e)} h`:''}</div>
  ${e.place?`<div class="small mute">📍 ${E(e.place)}</div>`:''}${e.notes?`<div class="small">${E(e.notes)}</div>`:''}
- <div class="row" style="margin-top:4px">${cancelTags(e)}${cf?'<span class="tag bad">⚠ overlaps</span>':''}${e.inv?'<span class="tag ok">invoiced</span>':''}${e.noinv?'<span class="tag">record only</span>':''}</div></div>
+ <div class="row" style="margin-top:4px">${cancelTags(e)}${cf?'<span class="tag bad">⚠ overlaps</span>':''}${e.inv?'<span class="tag ok">invoiced</span>':''}${e.noinv?'<span class="tag">record only</span>':''}${payTag(e)}</div></div>
  <div style="text-align:end"><b>${counts(e)?money(amountOf(e),S.settings.currency,'en'):'—'}</b><br><button class="b s" data-a="evedit" data-v="${e.id}">Edit</button> ${e.status==='cancelled'?`<button class="b s" data-a="restore" data-v="${e.id}">Restore</button>`:`<button class="b s" data-a="cancel" data-v="${e.id}">Cancel…</button>`}</div></div>`}
 
 function evForm(id,date,pre){
@@ -386,9 +406,10 @@ function evForm(id,date,pre){
  <div class="g2"><div><label>If cancelled: by whom</label><select name="cancelBy">${opts([['','—'],['me','I cancelled'],['them','They cancelled']],ev.cancelBy||'')}</select></div><div><label>Reason</label><input name="cancelReason" value="${E(ev.cancelReason)}"></div></div>
  <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="charge" style="width:auto"${ev.charge?' checked':''}>They cancelled and I still charge for it</label>
  <label>Cancellation fee (empty = full price)</label><input type="number" step="any" name="cancelFee" value="${ev.cancelFee??''}">
- ${id?'':`<div class="g2"><div><label>Repeat</label><select name="rep">${opts([['none','Once'],['day','Every day (skips Saturday)'],['week','Every week']],(pre&&pre.rep)||'none')}</select></div><div><label>Times (total)</label><input type="number" name="cnt" min="1" max="120" value="${(pre&&pre.cnt)||4}"></div></div>`}
+ ${id?'':`<div class="g2"><div><label>Repeat</label><select name="rep">${opts([['none','Just this one lesson'],['week','Every week, same day and time'],['day','Every day (skips Saturday)']],(pre&&pre.rep)||'none')}</select></div><div id="cntrow"><label id="cntl">How many weeks in total (counting this one)</label><input type="number" name="cnt" min="1" max="120" value="${(pre&&pre.cnt)||6}"></div></div>
+ <div class="row" id="repq" style="margin:4px 0"><button class="b s" type="button" data-a="repn" data-v="4">4 weeks</button><button class="b s" type="button" data-a="repn" data-v="6">6 weeks</button><button class="b s" type="button" data-a="repn" data-v="8">8 weeks</button></div><div class="small" id="repprev" style="margin-bottom:6px"></div>`}
  <div class="row" style="margin-top:12px"><button class="b p" type="submit">Save</button><button class="b" type="button" data-a="close">Cancel</button><span class="sp"></span>${id?'<button class="b d" type="button" data-a="evdel" data-v="'+id+'">Delete</button>':''}</div></form>`);
- qtyUI();slotWarn()}
+ qtyUI();slotWarn();repPrev()}
 function qtyUI(){const f=document.getElementById('evf');if(!f)return;const m=jtOf(f.jt.value).mode;
  document.getElementById('qtyw').style.display=m==='flat'?'none':'';
  {const jt=jtOf(f.jt.value),cl=clOf(f.client.value),std=(cl&&cl.rates&&cl.rates[jt.id]!==undefined&&cl.rates[jt.id]!=='')?cl.rates[jt.id]:jt.rate;f.rate.placeholder='Standard: '+(std||0)}
@@ -483,13 +504,15 @@ function vCli(){const q=(ui.cq||'').toLowerCase(),cur=S.settings.currency;
  const list=[...S.clients].filter(c=>!q||(c.name+' '+(c.notes||'')+' '+(c.kind||'')).toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
  return `<div class="row"><h2 class="sp">Clients &amp; students (${S.clients.length})</h2><button class="b" data-a="clbulk">Add many</button><button class="b p" data-a="clnew">+ Add</button></div>
  <input data-ch="cs" placeholder="Search by name or note" value="${E(ui.cq||'')}" style="margin:8px 0">`+
+ (()=>{let tot=0,n=0;S.clients.forEach(c=>{const m=payMap(c);if(m.unpaid.length){tot+=m.owed;n++}});return n?`<div class="card"><b>Outstanding: ${money(tot,cur,'en')}</b> <span class="small mute">from ${n} student${n===1?'':'s'}</span></div>`:''})()+
  (list.length?list.map(c=>{const L=ledger(c),lp=lastPay(c),ev=sessionsSince(c),ch=sessionsSince(c).filter(e=>e.status==='cancelled').length,n=ev.reduce((s,e)=>s+qtyOf(e),0),owed=ev.reduce((s,e)=>s+amountOf(e),0),hasS=S.events.some(e=>e.client===c.id&&jtOf(e.jt).mode==='session');
   const rates=Object.entries(c.rates||{}).filter(([k,v])=>v!==''&&v!=null).map(([k,v])=>{const j=jtOf(k),t=(j.tiers||[]).find(t=>t.rate===+v);return `${E(j.name)}: ${money(v,cur,'en')}${t?' ('+E(t.name)+')':''}`}).join(' · ');
   return `<div class="card"><div class="row"><b class="sp">${E(c.name)}</b><span class="tag">${E(c.kind||'')}</span></div>
   ${rates?`<div class="small">${rates}</div>`:''}${availLine(c)}${c.notes?`<div class="small mute">${E(c.notes)}</div>`:''}
   ${hasS?`<div style="margin-top:6px"><b>${n}</b> lesson${n===1?'':'s'} since ${lp?'last payment ('+fdate(lp)+')':'the start (no payment recorded)'}${n?' · <b>'+money(owed,cur,'en')+'</b>':''}${ch?' · incl. '+ch+' charged cancellation'+(ch===1?'':'s'):''}</div>`:''}
   ${L.has?`<div style="margin-top:4px">Balance: ${L.bal>0.004?`<span class="tag bad">owes ${money(L.bal,cur,'en')}</span>`:L.bal<-0.004?`<span class="tag ok">paid ahead ${money(-L.bal,cur,'en')}</span>`:'<span class="tag ok">settled</span>'}</div>`:''}
-  <div class="row" style="margin-top:8px"><button class="b s" data-a="clpay" data-v="${c.id}">Record payment</button>${L.has?`<button class="b s" data-a="stmt" data-v="${c.id}">Statement</button>`:''}<button class="b s" data-a="cledit" data-v="${c.id}">Edit</button></div></div>`}).join(''):'<div class="card mute">No clients match.</div>')}
+  ${hasS?(()=>{const pm=payMap(c);return pm.unpaid.length?`<div style="margin-top:4px"><span class="tag bad">${pm.unpaid.length} unpaid lesson${pm.unpaid.length===1?'':'s'} · ${money(pm.owed,cur,'en')}</span> <button class="b s" data-a="unpaid" data-v="${c.id}">See &amp; mark paid</button></div>`:(S.events.some(e=>e.client===c.id&&jtOf(e.jt).trackOnly&&counts(e)&&e.date<=today()&&amountOf(e)>0)?'<div style="margin-top:4px"><span class="tag ok">all lessons paid</span></div>':'')})():''}
+  <div class="row" style="margin-top:8px">${hasS?`<button class="b s p" data-a="bookahead" data-v="${c.id}">Book ahead</button>`:''}<button class="b s" data-a="clpay" data-v="${c.id}">Record payment</button>${L.has?`<button class="b s" data-a="stmt" data-v="${c.id}">Statement</button>`:''}<button class="b s" data-a="cledit" data-v="${c.id}">Edit</button></div></div>`}).join(''):'<div class="card mute">No clients match.</div>')}
 function bulkAdd(text,def){const jt=S.jobTypes.find(j=>j.mode==='session'),have=new Set(S.clients.map(c=>c.name.trim().toLowerCase()));let n=0;
  String(text||'').split('\n').forEach(l=>{l=l.trim();if(!l)return;const m=l.match(/^(.*?)[,;\t]\s*(\d+(?:[.,]\d+)?)\s*€?$/);const name=(m?m[1]:l).trim();if(!name||have.has(name.toLowerCase()))return;
   const price=m?+m[2].replace(',','.'):(def!==''&&def!=null?+def:null);have.add(name.toLowerCase());
@@ -577,6 +600,18 @@ const A={
  jtnew(){jtForm()},jtedit(v){jtForm(v)},
  jtdel(v){if(S.events.some(e=>e.jt===v)||S.invoices.some(i=>i.jt===v))return alert('This job type has entries or invoices, so it cannot be deleted.');if(!confirm('Delete this job type?'))return;S.jobTypes=S.jobTypes.filter(j=>j.id!==v);save();closeModal();render()},
  clnew(){clForm()},cledit(v){clForm(v)},
+ repn(v){const f=document.getElementById('evf');if(!f)return;if(f.rep.value==='none')f.rep.value='week';f.cnt.value=v;repPrev()},
+ evpay(v){const e=S.events.find(x=>x.id===v);if(!e||!e.client)return;const c=clOf(e.client);c.payments=c.payments||[];const i=c.payments.findIndex(p=>p.ev===v);
+  if(i>=0){if(!confirm('Mark this lesson as unpaid again?'))return;c.payments.splice(i,1)}
+  else{const pm=payMap(c),x=pm.unpaid.find(u=>u.e.id===v),a=x?x.due:amountOf(e);if(!(a>0))return alert('This lesson has no price yet. Set the rate first.');c.payments.push({date:today(),amount:a,ev:v})}
+  save();render();if(document.getElementById('modal').classList.contains('on')&&ui.unpaidFor===e.client)unpaidModal(e.client)},
+ unpaid(v){unpaidModal(v)},
+ paidall(v){const c=clOf(v),pm=payMap(c);c.payments=c.payments||[];pm.unpaid.forEach(x=>c.payments.push({date:today(),amount:x.due,ev:x.e.id}));save();render();unpaidModal(v)},
+ bookahead(v){const c=clOf(v),ls=S.events.filter(e=>e.client===v&&jtOf(e.jt).mode==='session'&&e.start).sort((a,b)=>b.date.localeCompare(a.date));
+  const jt=(ls[0]&&ls[0].jt)||(S.jobTypes.find(j=>j.mode==='session'&&j.trackOnly)||S.jobTypes.find(j=>j.mode==='session')||{}).id;
+  let dt=today(),pre={jt,client:v,rep:'week',cnt:6};
+  if(ls[0]){const l=ls[0],wd=pd(l.date).getDay();dt=addDays(l.date>=today()?l.date:today(),1);while(pd(dt).getDay()!==wd)dt=addDays(dt,1);Object.assign(pre,{start:l.start,end:l.end,title:l.title||'',rate:l.rate||''})}
+  evForm(null,dt,pre)},
  cldel(v){if(S.events.some(e=>e.client===v))return alert('This client has entries, so it cannot be deleted.');if(!confirm('Delete this client?'))return;S.clients=S.clients.filter(c=>c.id!==v);save();closeModal();render()},
  stmt(v){const ds=s=>s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(2,4),c=clOf(v),L=ledger(c),cur=S.settings.currency,M=n=>money(n,cur,'en');
   modal(`<div class="row noprint" style="margin-bottom:10px"><button class="b p" data-a="print">Print / save as PDF</button><span class="sp"></span><button class="b" data-a="close">Close</button></div>
@@ -654,7 +689,8 @@ const A={
  export(){const b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='jobs-invoices-backup-'+today()+'.json';a.click()}
 };
 document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&A[t.dataset.a]){e.preventDefault();A[t.dataset.a](t.dataset.v)}});
-document.addEventListener('change',e=>{const t=e.target,k=t.dataset&&t.dataset.ch;
+document.addEventListener('input',e=>{const t=e.target;if(t.form&&t.form.id==='evf'&&t.name==='cnt')repPrev()});
+document.addEventListener('change',e=>{const t=e.target,k=t.dataset&&t.dataset.ch;if(t.form&&t.form.id==='evf'&&['rep','cnt','date'].includes(t.name))repPrev();
  if(k==='fd'){fdState()[t.name]=t.value;render();return}
  if(k==='mr'){ui.mr[t.name]=t.value;if(['date','from','to'].includes(t.name))ui.mr.sel={};mrRender();return}
  if(k==='mrsel'){ui.mr.sel=ui.mr.sel||{};ui.mr.sel[t.dataset.id]=t.checked;mrRender();return}
@@ -676,13 +712,13 @@ document.addEventListener('change',e=>{const t=e.target,k=t.dataset&&t.dataset.c
 document.addEventListener('submit',e=>{e.preventDefault();const f=e.target,d=Object.fromEntries(new FormData(f));
  if(f.id==='evf'){
   const base={jt:d.jt,date:d.date,start:d.start,end:d.end,client:d.client==='__new'?'':d.client,title:d.title.trim(),notes:d.notes.trim(),qty:d.qty,rate:d.rate,status:d.status,reschedFrom:d.reschedFrom||'',place:(d.place||'').trim(),noinv:!!d.noinv,cancelBy:d.cancelBy||'',cancelReason:(d.cancelReason||'').trim(),charge:!!d.charge&&d.cancelBy==='them',cancelFee:d.cancelFee||''};
-  {const dates=[];if(f.dataset.id)dates.push(d.date);else{const n=d.rep==='none'?1:Math.max(1,Math.min(120,+d.cnt||1));let dy=d.date;while(dates.length<n){if(d.rep==='day'&&pd(dy).getDay()===6){dy=addDays(dy,1);continue}dates.push(dy);dy=addDays(dy,d.rep==='week'?7:1)}}
+  {const dates=f.dataset.id?[d.date]:repDates(d.date,d.rep,d.cnt).dates;
    if(base.status==='active'&&base.start){const msgs=[];dates.forEach(dt=>slotIssues(dt,base.start,base.end,base.client,f.dataset.id||null,base.jt).forEach(m=>msgs.push((dates.length>1?fdate(dt)+': ':'')+m)));
     if(msgs.length&&!confirm(msgs.slice(0,8).join('\n')+(msgs.length>8?'\n…and '+(msgs.length-8)+' more':'')+'\n\nSave anyway?'))return}}
   const createdIds=f.dataset.id?[f.dataset.id]:[];
   if(f.dataset.id){Object.assign(S.events.find(x=>x.id===f.dataset.id),base)}
-  else{const n=d.rep==='none'?1:Math.max(1,Math.min(120,+d.cnt||1));let day=d.date,made=0;
-   while(made<n){if(d.rep==='day'&&pd(day).getDay()===6){day=addDays(day,1);continue}{const nid=uid();createdIds.push(nid);S.events.push({id:nid,...base,date:day})}made++;day=addDays(day,d.rep==='week'?7:1)}}
+  else{const rd=repDates(d.date,d.rep,d.cnt);rd.dates.forEach(day=>{const nid=uid();createdIds.push(nid);S.events.push({id:nid,...base,date:day})});
+   if(d.rep&&d.rep!=='none')setTimeout(()=>alert('Added '+rd.dates.length+' lesson'+(rd.dates.length===1?'':'s')+':\n'+rd.dates.map(shortD).join(', ')+(rd.skipped.length?'\n\nSkipped: '+rd.skipped.map(s=>shortD(s.d)+' ('+s.why+')').join(', '):'')),50)}
   if(d.reschedFrom&&!f.dataset.id){const o=S.events.find(x=>x.id===d.reschedFrom);if(o)o.reschedTo=d.date;if(ui.fd)ui.fd.rf=''}
   ui.sel=d.date;ui.month=new Date(pd(d.date).getFullYear(),pd(d.date).getMonth(),1);save();closeModal();render();
   const ent=S.events.find(x=>x.id===createdIds[0]);
