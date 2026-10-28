@@ -59,6 +59,7 @@ textarea{min-height:64px}
 @media(min-width:561px){.dots{display:none}}
 #modal .decl,.decl{font-family:Cambria,Georgia,'Times New Roman',serif;font-size:13px}
 .inv.decl .dh{font-weight:700;font-size:15px;margin-bottom:34px}
+.sigimg{display:block;max-height:62px;max-width:230px;mix-blend-mode:multiply;margin:0 0 2px}
 .inv.decl table{border-collapse:collapse;width:100%;margin:0 0 30px}
 .inv.decl th,.inv.decl td{border:1.5px solid #000;padding:3px 6px;text-align:left;font-size:13px;text-transform:none;height:24px;vertical-align:top}
 .inv.decl .d1 th{width:26%}
@@ -79,7 +80,7 @@ textarea{min-height:64px}
 </style>
 </head>
 <body>
-<header><h1>Jobs &amp; Invoices</h1><nav id="nav"></nav></header>
+<header><h1>Jobs &amp; Invoices <span id="ver" style="font-size:11px;font-weight:500;color:var(--mute);border:1px solid var(--line);border-radius:10px;padding:1px 7px;vertical-align:middle"></span></h1><nav id="nav"></nav></header>
 <main id="main"></main>
 <div id="modal"></div>
 <script>
@@ -88,6 +89,7 @@ const COLORS=['#2f5fd0','#c0392b','#1e8e5a','#b7791f','#7b4bb7','#0f8b9d','#d633
 const CURS=['EUR','USD','GBP','ILS','CHF','CAD','AUD'];
 const LANGS={en:'English',nl:'Nederlands',he:'עברית'};
 const LOC={en:'en-IE',nl:'nl-NL',he:'he-IL'};
+const APP_VERSION='28 Oct 2026 · build 21';
 const MODES={flat:'Flat fee per job',hourly:'Hourly (hours from start/end time)',session:'Per lesson / session',daystudent:'Per day + per student'};
 const I18N={
  en:{invoice:'Invoice',no:'No.',date:'Date',billTo:'Bill to',desc:'Description',qty:'Qty',rate:'Rate',amount:'Amount',sub:'Subtotal',vat:'VAT',total:'Total',pay:'Payment details',paid:'PAID'},
@@ -367,7 +369,7 @@ document.getElementById('modal').addEventListener('mousedown',e=>{if(e.target.id
 
 /* ---------- views ---------- */
 const TABS=[['cal','Calendar'],['find','Find a time'],['log','Log'],['inv','Invoices'],['cli','Students'],['jobs','My jobs'],['set','Settings']];
-function render(){
+function render(){{const v=document.getElementById('ver');if(v)v.textContent=APP_VERSION}
  document.getElementById('nav').innerHTML=TABS.map(([k,l])=>`<button class="${ui.tab===k?'on':''}" data-a="tab" data-v="${k}">${l}</button>`).join('');
  document.getElementById('main').innerHTML=({cal:vCal,find:vFind,log:vLog,inv:vInv,cli:vCli,jobs:vJobs,set:vSet})[ui.tab]();
 }
@@ -482,7 +484,8 @@ function letterHTML(inv){const t=inv.tpl,f=inv.from,L=I18N[inv.lang]||I18N.en;
  <div style="margin:26px 0 24px">${inv.vat?`${L.vat} ${inv.vat}%: ${mny(inv.total-inv.sub)}<br>`:''}${E(t.totalLabel||'Total')} ${mny(inv.total)}</div>
  ${t.payText||f.payment?`<div>${E(t.payText||'')}${t.payText&&f.payment?'<br>':''}${br(f.payment)}</div>`:''}
  ${t.footer?`<div style="margin-top:14px">${br(t.footer)}</div>`:''}
- ${t.closing?`<div style="margin-top:22px">${E(t.closing)}<br><br>${E(f.name)}</div>`:''}</div>`}
+ ${t.closing?`<div style="margin-top:22px">${E(t.closing)}<br>${S.settings.sig&&sigOn('letter')?`<img class="sigimg" src="${S.settings.sig}" alt="" style="margin:4px 0">`:'<br>'}${E(f.name)}</div>`:''}</div>`}
+const sigOn=k=>{const o=S.settings.sigOn||{decl:true,letter:false};return !!o[k]};
 function declHTML(inv){const t=inv.tpl,f=inv.from,L=I18N[inv.lang]||I18N.en;
  const dd=s=>s?s.slice(8)+'/'+s.slice(5,7)+'/'+s.slice(2,4):'';
  const fmt=n=>Number.isInteger(n)?n:n.toFixed(2).replace('.',',');
@@ -495,7 +498,7 @@ function declHTML(inv){const t=inv.tpl,f=inv.from,L=I18N[inv.lang]||I18N.en;
  <table class="d2"><tr><th style="width:17%">Datum</th><th>Omschrijving</th><th style="width:17%">Bedrag</th></tr>
  ${rows.map(r=>`<tr><td><b>${E(r[0])}</b></td><td><b>${E(r[1])}</b></td><td><b>${E(r[2])}</b></td></tr>`).join('')}
  <tr><th>Total</th><td></td><th>${fmt(inv.total)}€</th></tr></table>
- <table class="d3"><tr><th>Naam en handtekening declarant</th><th>Naam en handtekening eindverantwoordelijke</th></tr><tr><td style="height:70px;vertical-align:bottom"><b>${E(f.fullName)}</b></td><td></td></tr></table>
+ <table class="d3"><tr><th>Naam en handtekening declarant</th><th>Naam en handtekening eindverantwoordelijke</th></tr><tr><td style="height:${S.settings.sig&&sigOn('decl')?'92':'70'}px;vertical-align:bottom">${S.settings.sig&&sigOn('decl')?`<img class="sigimg" src="${S.settings.sig}" alt="">`:''}<b>${E(f.fullName)}</b></td><td></td></tr></table>
  <div class="dn">${notes.map((n,i)=>i===0&&/^N\.B\.?:?$/.test(n.trim())?`<b>${E(n)}</b>`:E(n)).join('<br>')}</div></div>`}
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],DAYN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 function hebHoliday(s){try{const d=pd(s);d.setHours(12);const parts=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'long'}).formatToParts(d);
@@ -573,6 +576,13 @@ function vSet(){const s=S.settings;
  ${(b.label||b.from||b.len)?`<div class="small mute" style="margin-top:4px">${E(blockPreview(b))}</div>`:''}</div>`}).join('')}
  <div class="small mute">To change a time from a certain date, give the old block an "until" date and add a new block with a "from" date. Remove a block by clearing its times.</div>
  <div class="row" style="margin-top:10px"><button class="b p" type="submit">Save availability</button></div></form>${excSettingsList()}</div>
+ <div class="card"><h2>Signature</h2><p class="small mute">Upload a photo or scan of your signature (a signature on white paper works). It is stored only on this device, and printed on the invoices you choose.</p>
+ ${s.sig?`<div style="border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff"><img src="${s.sig}" alt="signature" style="max-height:70px;max-width:100%;mix-blend-mode:multiply"></div>`:''}
+ <input type="file" id="sigfile" accept="image/*" style="margin-top:8px">
+ <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" style="width:auto" data-ch="sigon" name="decl"${sigOn('decl')?' checked':''}>Print it on the PIG / Esnoga Declaratieformulier</label>
+ <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" style="width:auto" data-ch="sigon" name="letter"${sigOn('letter')?' checked':''}>Print it on letter invoices (JBW style)</label>
+ ${s.sig?`<div class="row" style="margin-top:8px"><button class="b s d" data-a="sigdel">Remove signature</button></div>`:''}</div>
+ <div class="card"><h2>App version</h2><div>You are using: <b>${APP_VERSION}</b></div><div class="small mute" id="verres">The label in the top corner shows the same version. After you upload a new file to GitHub, check it here.</div><div class="row" style="margin-top:8px"><button class="b s" data-a="chkver">Check for a newer version</button></div></div>
  ${trashCard()}<div class="card"><h2>Backup</h2><p class="small mute">Your data is stored only in this browser on this device. Export a backup regularly, and use it to move to another device.</p>
  <div class="row"><button class="b" data-a="export">Export backup</button><label class="b" style="margin:0;color:var(--ink)">Import backup<input type="file" accept=".json" id="imp" style="display:none"></label></div></div>`}
 
@@ -627,6 +637,10 @@ const A={
  evdel1(v){const e=S.events.find(x=>x.id===v);if(!e)return;toTrash([e]);S.events=S.events.filter(x=>x.id!==v);save();closeModal();render()},
  evdelN(v){const e=S.events.find(x=>x.id===v);if(!e)return;const l=[e,...laterOf(e)],ids=new Set(l.map(x=>x.id));toTrash(l);S.events=S.events.filter(x=>!ids.has(x.id));save();closeModal();render()},
  trashback(v){const t=(S.trash||[])[+v];if(!t)return;S.events.push(t.ev);S.trash.splice(+v,1);save();render()},
+ chkver(){const el=document.getElementById('verres');el.textContent='Checking…';
+  fetch(location.href.split('#')[0].split('?')[0]+'?nocache='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.text()}).then(t=>{const m=t.match(/APP_VERSION='([^']+)'/);if(!m){el.textContent='Could not read the version from the site.';return}
+   el.innerHTML=m[1]===APP_VERSION?'<span style="color:var(--ok)">✓ This is the newest version on your site.</span>':'A different version is on your site: <b>'+E(m[1])+'</b>. Close this page completely and open the address again to load it.'}).catch(()=>{el.textContent='Could not check (open the app from your GitHub address, with internet).'})},
+ sigdel(){if(!confirm('Remove your signature?'))return;delete S.settings.sig;save();render()},
  jtnew(){jtForm()},
  jtpreset(v){const f=document.getElementById('jtf');if(!f)return;const P={shiur:['Shiur / lecture','flat',0,'',0],online:['Online work','flat',0,'',1],event:['Speaking / event','flat',0,'',0],hourly:['Hourly work','hourly',0,'',0]}[v];
   f.name.value=P[0];f.mode.value=P[1];f.track.checked=!!P[4];f.name.focus()},jtedit(v){jtForm(v)},
@@ -730,7 +744,9 @@ const A={
 };
 document.addEventListener('click',e=>{const t=e.target.closest('[data-a]');if(t&&A[t.dataset.a]){e.preventDefault();A[t.dataset.a](t.dataset.v)}});
 document.addEventListener('input',e=>{const t=e.target;if(t.form&&t.form.id==='evf'&&t.name==='cnt')repPrev()});
-document.addEventListener('change',e=>{const t=e.target,k=t.dataset&&t.dataset.ch;if(t.form&&t.form.id==='evf'&&(['rep','cnt','date'].includes(t.name)||/^wd\d$/.test(t.name)))repPrev();
+document.addEventListener('change',e=>{const t=e.target,k=t.dataset&&t.dataset.ch;
+ if(k==='sigon'){S.settings.sigOn=Object.assign({decl:true,letter:false},S.settings.sigOn||{});S.settings.sigOn[t.name]=t.checked;save();return}
+ if(t.id==='sigfile'&&t.files[0]){const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{const sc=Math.min(1,600/im.width,200/im.height),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*sc));c.height=Math.max(1,Math.round(im.height*sc));const cx=c.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,c.width,c.height);cx.drawImage(im,0,0,c.width,c.height);S.settings.sig=c.toDataURL('image/jpeg',0.85);save();render();alert('Signature saved.')};im.onerror=()=>alert('That file could not be read as an image.');im.src=fr.result};fr.readAsDataURL(t.files[0]);return}if(t.form&&t.form.id==='evf'&&(['rep','cnt','date'].includes(t.name)||/^wd\d$/.test(t.name)))repPrev();
  if(k==='fd'){fdState()[t.name]=t.value;render();return}
  if(k==='mr'){ui.mr[t.name]=t.value;if(['date','from','to'].includes(t.name))ui.mr.sel={};mrRender();return}
  if(k==='mrsel'){ui.mr.sel=ui.mr.sel||{};ui.mr.sel[t.dataset.id]=t.checked;mrRender();return}
